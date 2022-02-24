@@ -31,52 +31,99 @@ export class FinalProject extends Scene {
         this.shapes = {
             'cube': new Cube(),
             'sphere': new defs.Subdivision_Sphere(4),
+            'cone': new defs.Closed_Cone(30, 30)
         };
 
         // *** Materials
         this.materials = {
             plastic: new Material(new defs.Phong_Shader(),
-                {ambient: .4, diffusivity: .6, color: hex_color("#ffffff")}),
+                {ambient: .4, diffusivity: .6, specularity: 0, color: hex_color("#ffffff")}),
         }
 
         this.initial_camera_location = Mat4.look_at(vec3(0, 10, 20), vec3(0, 0, 0), vec3(0, 1, 0));
     }
 
-    draw_plane(context, program_state, model_transform, color) {
+    draw_tom(context, program_state, model_transform) {
+        let tom_color = hex_color("#242b53");
+        let tom_ear_color = hex_color("#763956");
+
+        let model_transform_original = model_transform;
+        model_transform = model_transform.times(Mat4.scale(3, 3, 3));
+        this.shapes.sphere.draw(context, program_state, model_transform, this.materials.plastic.override({color: tom_color}));
+        model_transform = model_transform.times(Mat4.translation(2, -1, 0)).times(Mat4.scale(2, 1.5, 1));
+        this.shapes.sphere.draw(context, program_state, model_transform, this.materials.plastic.override({color: tom_color}));
+
+        //outer ear
+        let model_transform_ear = model_transform_original
+            .times(Mat4.rotation(Math.PI / 2, 0, 1, 0))
+            .times(Mat4.rotation(Math.PI / 6, 0, 0, 1))
+            .times(Mat4.translation(0, 3.5, 0))
+            .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
+            .times(Mat4.scale(1, 0.1, 1));
+        this.shapes.cone.draw(context, program_state, model_transform_ear, this.materials.plastic.override({color:tom_color}));
+        model_transform_ear = model_transform_original
+            .times(Mat4.rotation(Math.PI / 2, 0, 1, 0))
+            .times(Mat4.rotation(-Math.PI / 6, 0, 0, 1))
+            .times(Mat4.translation(0, 3.5, 0))
+            .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
+            .times(Mat4.scale(1, 0.1, 1));
+        this.shapes.cone.draw(context, program_state, model_transform_ear, this.materials.plastic.override({color:tom_color}));
+
+        //inner ear
+        let model_transform_inner_ear = model_transform_original
+            .times(Mat4.translation(-0.1, 0, 0))
+            .times(Mat4.rotation(Math.PI / 2, 0, 1, 0))
+            .times(Mat4.rotation(Math.PI / 6, 0, 0, 1))
+            .times(Mat4.translation(0, 3.5, 0))
+            .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
+            .times(Mat4.scale(0.5, 0.1, 0.5));
+        this.shapes.cone.draw(context, program_state, model_transform_inner_ear, this.materials.plastic.override({color:tom_ear_color}));
+        model_transform_inner_ear = model_transform_original
+            .times(Mat4.translation(-0.1, 0, 0))
+            .times(Mat4.rotation(Math.PI / 2, 0, 1, 0))
+            .times(Mat4.rotation(-Math.PI / 6, 0, 0, 1))
+            .times(Mat4.translation(0, 3.5, 0))
+            .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
+            .times(Mat4.scale(0.5, 0.1, 0.5));
+        this.shapes.cone.draw(context, program_state, model_transform_inner_ear, this.materials.plastic.override({color:tom_ear_color}));
+    }
+
+    draw_plane(context, program_state, model_transform) {
         let copy = model_transform;
+        let plane_color = hex_color("#8b0000");
         model_transform = model_transform.times(Mat4.scale(2,2,2));
-        this.shapes.sphere.draw(context, program_state, model_transform, this.materials.plastic.override({color:color}));
+        this.shapes.sphere.draw(context, program_state, model_transform, this.materials.plastic.override({color: plane_color}));
         model_transform = model_transform.times(Mat4.scale(0.25,2,0.25));
         model_transform = model_transform.times(Mat4.translation(0,1,0));
-        this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color:color}));
+        this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color: plane_color}));
 
         model_transform = model_transform.times(Mat4.scale(4,0.5,4));
         model_transform = model_transform.times(Mat4.translation(5,-2,0));
-        this.shapes.sphere.draw(context, program_state, model_transform, this.materials.plastic.override({color:color}));
+        this.shapes.sphere.draw(context, program_state, model_transform, this.materials.plastic.override({color: plane_color}));
         model_transform = model_transform.times(Mat4.scale(0.25,2,0.25));
         model_transform = model_transform.times(Mat4.translation(0,1,0));
-        this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color:color}));
+        this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color: plane_color}));
 
         model_transform = model_transform.times(Mat4.scale(4,0.5,4));
         model_transform = model_transform.times(Mat4.translation(0,-2,-5));
-        this.shapes.sphere.draw(context, program_state, model_transform, this.materials.plastic.override({color:color}));
+        this.shapes.sphere.draw(context, program_state, model_transform, this.materials.plastic.override({color: plane_color}));
         model_transform = model_transform.times(Mat4.scale(0.25,2,0.25));
         model_transform = model_transform.times(Mat4.translation(0,1,0));
-        this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color:color}));
+        this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color: plane_color}));
 
         model_transform = model_transform.times(Mat4.scale(4,0.5,4));
         model_transform = model_transform.times(Mat4.translation(-5,-2,0));
-        this.shapes.sphere.draw(context, program_state, model_transform, this.materials.plastic.override({color:color}));
+        this.shapes.sphere.draw(context, program_state, model_transform, this.materials.plastic.override({color: plane_color}));
         model_transform = model_transform.times(Mat4.scale(0.25,2,0.25));
         model_transform = model_transform.times(Mat4.translation(0,1,0));
-        this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color:color}));
+        this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color: plane_color}));
 
         model_transform = model_transform.times(Mat4.translation(6,1.25,6));
         model_transform = model_transform.times(Mat4.scale(7,0.1,20));
 
         copy = copy.times(Mat4.translation(5,8,-5));
         copy = copy.times(Mat4.scale(7, 0.2, 14));
-        this.shapes.cube.draw(context, program_state, copy, this.materials.plastic.override({color:color}));
+        this.shapes.cube.draw(context, program_state, copy, this.materials.plastic.override({color:plane_color}));
 
         return model_transform;
     }
@@ -102,10 +149,11 @@ export class FinalProject extends Scene {
         // display():  Called once per frame of animation.
         // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
         super.display(context, program_state);
-        const blue = hex_color("#1a9ffa");
-        let model_transform = Mat4.identity();
+        let model_transform_plane = Mat4.identity();
+        let model_transform_tom = Mat4.identity();
         const t = this.t = program_state.animation_time / 1000;
-        this.draw_plane(context, program_state, model_transform, blue);
+        this.draw_tom(context, program_state, model_transform_tom);
+        //this.draw_plane(context, program_state, model_transform_plane);
 
     }
 }
