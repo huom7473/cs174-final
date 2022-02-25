@@ -126,10 +126,10 @@ export class FinalProject extends Scene {
         // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
         super.display(context, program_state);
         let model_transform_plane = Mat4.identity();
-        let model_transform_tom = Mat4.identity();
+        let model_transform_tom = Mat4.translation(2, 15.5, -5);
         const t = this.t = program_state.animation_time / 1000;
         this.draw_tom(context, program_state, model_transform_tom);
-        //this.draw_plane(context, program_state, model_transform_plane);
+        this.draw_plane(context, program_state, model_transform_plane);
 
     }
 }
