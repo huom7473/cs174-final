@@ -22,10 +22,16 @@ class PhysicsObject {
         this.model_transform = model_transform;
         this.lastDrawnTime = null;
 
-        this.forces.gravity = vec3(0, -1 * PhysicsObject.ACC_GRAVITY * this.mass, 0);
+        this.initialLaunch_1 = false;
+        this.initialLaunch_2 = false;
+        this.launchTime = null;
+        this.elapsedTime = 0;
+        this.descendingFlag = false;
+
+        //this.forces.gravity = vec3(0, -1 * PhysicsObject.ACC_GRAVITY * this.mass, 0);
     }
 
-    draw(context, program_state) {
+    draw(context, program_state, model_transform) {
         if (this.lastDrawnTime === null) {
             this.lastDrawnTime = program_state.animation_time;
         }
@@ -42,8 +48,26 @@ class PhysicsObject {
         this.velocity = this.velocity.plus(acceleration.times(dt));
 
         let displacement = this.velocity.times(dt);
+        if (this.initialLaunch_1 && !this.initialLaunch_2){
+            this.launchTime = program_state.animation_time;
+            this.initialLaunch_2 = true;
+        } else if (this.initialLaunch_2){
+            this.elapsedTime = program_state.animation_time - this.launchTime;
+            this.velocity = vec3(-20, 0, 0);
+        }
+        if (this.elapsedTime > 300){
+            this.descendingFlag = true;
+            this.initialLaunch_1 = false;
+            this.initialLaunch_2 = false;
+        }
+        if(this.descendingFlag){
+            this.descendingFlag = false;
+            this.forces.gravity = vec3(0, -1 * PhysicsObject.ACC_GRAVITY * this.mass, 0);
+        }
+
         this.model_transform.pre_multiply(Mat4.translation(...displacement));
-        this.shape.draw(context, program_state, this.model_transform, this.material);
+        let model_transform_watermelon = model_transform.times(this.model_transform).times(Mat4.scale(6, 3, 3));
+        this.shape.draw(context, program_state, model_transform_watermelon, this.material);
 
         this.lastDrawnTime = program_state.animation_time;
     }
@@ -56,6 +80,9 @@ class PhysicsObject {
         delete this.forces[name];
     }
 
+    setInitialLaunch(){
+        this.initialLaunch_1 = true;
+    }
 }
 
 export class FinalProject extends Scene {
@@ -74,7 +101,7 @@ export class FinalProject extends Scene {
         // *** Materials
         this.materials = {
             test: new Material(new Phong_Shader(), {
-                ambient: 1, color: hex_color("#9d2b2b")
+                ambient: 1, color: hex_color("#006400")
             }),
             plastic: new Material(new defs.Phong_Shader(),
                 {ambient: .4, diffusivity: .6, specularity: 0, color: hex_color("#ffffff")}),
@@ -82,7 +109,10 @@ export class FinalProject extends Scene {
 
         this.initial_camera_location = Mat4.look_at(vec3(0, 10, 80), vec3(0, 0, 0), vec3(0, 1, 0));
 
-        this.ball = new PhysicsObject(this.shapes.sphere, 50, this.materials.test, {}, vec3(-10, 0, 0), Mat4.identity());
+        this.launched = false;
+        let initial_position = Mat4.identity();
+        initial_position = initial_position.times(Mat4.translation(5,4,-5));
+        this.ball = new PhysicsObject(this.shapes.sphere, 50, this.materials.test, {}, vec3(0, 0, 0), initial_position);
     }
 
     draw_tom(context, program_state, model_transform) {
@@ -164,7 +194,7 @@ export class FinalProject extends Scene {
 
     make_control_panel() {
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
-
+        this.key_triggered_button("Launch", ["Control", "0"], () => this.ball.setInitialLaunch());
     }
 
     display(context, program_state) {
@@ -187,7 +217,11 @@ export class FinalProject extends Scene {
         let model_transform_plane = Mat4.identity();
         let model_transform_tom = Mat4.translation(2, 15.5, -5);
         const t = this.t = program_state.animation_time / 1000;
+        let model_transform_movement = Mat4.translation(-t * 5, 0, 0);
+        model_transform_tom = model_transform_tom.times(model_transform_movement);
         this.draw_tom(context, program_state, model_transform_tom);
+
+        model_transform_plane = model_transform_plane.times(model_transform_movement);
         this.draw_plane(context, program_state, model_transform_plane);
 
         program_state.lights = [new Light(vec4(0, 10, 0, 1), color(1, 1, 1, 1), 1000)];
@@ -197,7 +231,7 @@ export class FinalProject extends Scene {
         //     // this.ball.addForce("up", vec3(0, 250, 0));
         //     this.ball.velocity = vec3(0, 10, 0);
         // }
-        this.ball.draw(context, program_state);
+        this.ball.draw(context, program_state, model_transform_movement);
     }
 }
 
