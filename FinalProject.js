@@ -9,6 +9,21 @@ const {
     Phong_Shader, Subdivision_Sphere
 } = defs;
 
+
+class Plane_Model extends Shape {
+    constructor() {
+        super("position", "normal", "texture_coord");
+        defs.Closed_Cone.insert_transformed_copy_into(this, [30, 30], 
+            Mat4.translation(0, 0, -0.5)
+            .times(Mat4.scale(1, 1, 3))
+            );
+        defs.Cube.insert_transformed_copy_into(this, [],
+            Mat4.scale(2.6, 0.2, 0.8)
+            );
+    }
+}
+
+
 class PhysicsObject {
 
     static ACC_GRAVITY = 0.5;
@@ -25,8 +40,6 @@ class PhysicsObject {
         this.center = vec3(0, 0, 0);
         this.rotation = Mat4.identity();
         this.previous = {center: this.center.copy(), rotation: this.rotation.copy()};
-        // console.log(this.rotation);
-        // this.advance(0);
 
         
     }
@@ -46,9 +59,13 @@ class PhysicsObject {
         for (const force of Object.values(this.forces)) {
             sumForces = sumForces.plus(force.value);
             if ("loc" in force) {
-                sumTorques = sumTorques.plus(force.value.cross(this.rotation.times(force.loc)));
+                sumTorques = sumTorques.plus(this.rotation.times(force.loc.to4(true)).to3().cross(force.value));
+                // sumTorques = sumTorques.plus(force.loc.cross(force.value));
+                console.log(this.rotation.times(force.loc.to4(true)));
             }
         }
+        // console.log(this.velocity);
+        // console.log(this.forces);
         
         const acceleration = sumForces.times(1 / this.mass);
         const angular_acceleration = sumTorques.times(1 / this.moment_inertia);
@@ -58,6 +75,14 @@ class PhysicsObject {
     }
 
     advance(time_amount) {
+        // for (let x of Object.values(this.forces)) {
+        //     for (let y of x.value) {
+        //         if (isNaN(y)) {
+        //             console.log(this.forces);
+        //             console.log(this.velocity);
+        //         }
+        //     }
+        // }
         
         const [acceleration, angular_acceleration] = this.calc_acceleration();
         
@@ -67,9 +92,8 @@ class PhysicsObject {
         this.previous = {center: this.center.copy(), rotation: this.rotation.copy()};
         
         this.center = this.center.plus(this.velocity.times(time_amount));
-        const rotation_axis = this.angular_velocity.equals(vec3(0, 0, 0)) ? vec3(1, 0, 0) : this.angular_velocity;
-        this.rotation.pre_multiply(Mat4.rotation(-time_amount * this.angular_velocity.norm(), ...rotation_axis));
-        // console.log(`${this.angular_velocity}`);
+        const rotation_axis = this.angular_velocity.equals(vec3(0, 0, 0)) ? vec3(1, 0, 0) : this.angular_velocity.normalized();
+        this.rotation.pre_multiply(Mat4.rotation(time_amount * this.angular_velocity.norm(), ...rotation_axis));
     }
 
     blend_rotation(alpha) {
@@ -107,6 +131,104 @@ class PhysicsObject {
 
 }
 
+class Plane extends PhysicsObject {
+
+    static THRUST = 100;
+    static DRAG_CONSTANT = 3;
+    static DRAG_CONSTANT_VER = 2;
+    static LIFT_POWER = 10;
+
+    constructor() {
+        super(new Plane_Model(), 2000, new Material(new Phong_Shader(), {
+            ambient: 1, color: hex_color("#9d2b2b")
+        }));
+
+        this.thrust = false;
+
+        this.rotation = Mat4.identity();//Mat4.rotation(-Math.PI / 8, 1, 0, 0);
+
+        this.forces.gravity = {
+            value: vec3(0, -PhysicsObject.ACC_GRAVITY * this.mass, 0)
+        };
+
+    }
+
+    update_thrust() {
+        if (this.thrust) {
+            this.forces.thrust = {
+                value: this.rotation.times(vec4(0, 0, 1, 0)).to3().times(Plane.THRUST)
+            }
+        }
+        else {
+            this.forces.thrust = {
+                value: vec3(0, 0, 0)
+            }
+        }
+    }
+
+    update_drag() {
+
+        const norm_vel = this.velocity.equals(vec3(0, 0, 0)) ? 
+            vec3(0, 0, 0) : this.velocity.normalized();
+        norm_vel[1] = 0;
+
+        this.forces.drag_hor = {
+            value: norm_vel.times(
+                (vec(this.velocity[0], this.velocity[2]).norm() ** 2) * -Plane.DRAG_CONSTANT
+                ),
+        };
+
+        this.forces.drag_ver = {
+            // value: vec3(0, -Math.sign(this.velocity[1]) * (this.velocity[1] ** 2) * Plane.DRAG_CONSTANT_VER, 0),
+            value: vec3(0, 80, 0),
+            loc: vec3(0, 0, -0.1)
+        }
+
+    }
+
+    update_lift() {
+        const head_point = this.rotation.times(vec4(0, 0, 1, 0)).to3();
+        let angle_atatck = Math.acos(
+            head_point.dot(this.velocity) / (this.velocity.norm() * head_point.norm())
+            );
+        if (isNaN(angle_atatck))
+            angle_atatck = 0;
+        
+        let angle_atatck_deg = (180 / Math.PI) * angle_atatck;
+
+        let lift_coefficient;
+
+        if (angle_atatck_deg > 90 || angle_atatck_deg < -90) {
+            lift_coefficient = 0;
+        }
+        else if (angle_atatck_deg > -30 && angle_atatck_deg < 30) {
+            lift_coefficient = angle_atatck_deg / 30;
+        }
+        else if (angle_atatck_deg > 30) {
+            lift_coefficient = 1.5 - (angle_atatck_deg / 60);
+        }
+        else {
+            lift_coefficient = -1.5 - (angle_atatck_deg / 60);
+        }
+
+
+        this.forces.lift = {
+            value: vec3(0, (this.velocity.norm() ** 2) * lift_coefficient * Plane.LIFT_POWER, 0)
+        }
+
+
+    }
+
+    advance(time_amount) {
+        this.update_thrust();
+        this.update_drag();
+        // this.update_lift();
+        
+        super.advance(time_amount);
+    }
+
+}
+
 export class FinalProject extends Simulation {
     constructor() {
         // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
@@ -118,25 +240,32 @@ export class FinalProject extends Simulation {
             cube: new defs.Cube(),
             cone: new defs.Closed_Cone(30, 30),
             wheel: new defs.Capped_Cylinder(15,15),
+            square: new defs.Square()
         };
 
         // *** Materials
         this.materials = {
             test: new Material(new Phong_Shader(), {
-                ambient: 1, color: hex_color("#9d2b2b")
+                ambient: 1,
+                color: hex_color("#9d2b2b"),
             }),
             plastic: new Material(new defs.Phong_Shader(),
                 {ambient: .4, diffusivity: .6, specularity: 0, color: hex_color("#ffffff")}),
+            ground: new Material(new defs.Phong_Shader(), {
+                ambient: 1,
+                color: hex_color("#2e521d"),
+            }),
         }
 
         this.initial_camera_location = Mat4.look_at(vec3(20, 0, 0), vec3(0, 0, 0), vec3(0, 1, 0));
 
-        this.ball = new PhysicsObject(this.shapes.cone, 50, this.materials.test);
-        this.ball.forces.gravity = {
-            value: vec3(0, -1 * 0.1 * this.ball.mass, 0),
-            loc: vec3(0, 0, .2)
-        };
-        this.bodies.push(this.ball);
+        // this.ball = new PhysicsObject(this.shapes.cone, 50, this.materials.test);
+        // this.ball.forces.gravity = {
+        //     value: vec3(0, -1 * 0.1 * this.ball.mass, 0),
+        //     loc: vec3(0, 0, .2)
+        // };
+        this.plane = new Plane();
+        this.bodies.push(this.plane);
     }
 
     draw_tom(context, program_state, model_transform) {
@@ -218,20 +347,53 @@ export class FinalProject extends Simulation {
 
     make_control_panel() {
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
+
+        this.live_string(box => {
+            box.textContent = "Speed: " + this.plane.velocity.norm().toPrecision(2)
+        });
+        this.new_line();
+
+        this.live_string(box => {
+            box.textContent = "Position: " + this.plane.center
+        });
+        this.new_line();
+
+        this.key_triggered_button("Thrust", ["u"], () => this.plane.thrust = true, undefined, () => this.plane.thrust = false);
+        this.new_line();
+
         super.make_control_panel();
     }
 
-    update_state() {
-
+    update_state(dt) {
+        // if (this.plane.center[1] < -2.5) {
+        //     this.plane.center[1] = -2.5;
+        //     this.plane.velocity[1] = 0;
+        // }
     }
 
     display(context, program_state) {
+
+        context.context.clearColor.apply(context.context, hex_color("#4fa8b8")); // background
+
+        // let desired = Mat4.look_at(this.plane.center.plus(vec3(0, 0, -5)) || vec3(0, 0, 0),
+        //     this.plane.drawn_location || Mat4.identity(),
+        //     vec3(0, 1, 0));
         
         if (!context.scratchpad.controls) {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
             // Define the global camera and projection matrices, which are stored in program_state.
             program_state.set_camera(this.initial_camera_location);
         }
+
+        let desired = Mat4.inverse((this.plane.drawn_location || Mat4.identity())
+            .times(Mat4.translation(0, 0, -14))
+            .times(Mat4.rotation(Math.PI, 0, 1, 0))
+            // .times(Mat4.rotation(-Math.PI / 8, 1, 0, 0))
+            );
+        desired = desired.map((x,i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.2));
+        program_state.set_camera(desired);
+
+
         program_state.projection_transform = Mat4.perspective(
             Math.PI / 4, context.width / context.height, 1, 100);
             // *** Lights: *** Values of vector or point lights.
@@ -256,9 +418,14 @@ export class FinalProject extends Simulation {
         //     this.ball.velocity = vec3(0, 10, 0);
         // }
         // this.ball.draw(context, program_state);
+
+        this.shapes.square.draw(context, program_state, 
+            Mat4.rotation(Math.PI / 2, 1, 0, 0)
+            .times(Mat4.translation(0, 0, 3))
+            .times(Mat4.scale(5000, 5000, 0)),
+            this.materials.ground);
+
         super.display(context, program_state);
-        // console.log(this.ball.drawn_location);
-        // console.log(this.bodies);
     }
 }
 
