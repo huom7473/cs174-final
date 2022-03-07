@@ -26,7 +26,7 @@ class Plane_Model extends Shape {
 
 class PhysicsObject {
 
-    static ACC_GRAVITY = 0.5;
+    static ACC_GRAVITY = 0.2;
 
     constructor(shape, mass, material) {
         this.shape = shape;
@@ -34,6 +34,7 @@ class PhysicsObject {
         this.moment_inertia = 50;
         this.material = material;
         this.forces = {};
+        this.torques = {};
         this.velocity = vec3(0, 0, 0);
         this.angular_velocity = vec3(0, 0, 0);
 
@@ -45,14 +46,6 @@ class PhysicsObject {
     }
 
     calc_acceleration() {
-        // const sumForces = Object.values(this.forces).reduce(
-        //     (previous, current) => previous.plus(current.value), vec3(0, 0, 0)
-        // );
-        
-        
-        // const sumTorques = Object.values(this.forces).reduce(
-        //     (previous, current) => previous.plus(current.hasOwnProperty("loc") ? current.value.cross(current.loc) : vec3(0, 0, 0)), vec3(0, 0, 0)
-        // );
         
         let sumForces = vec3(0, 0, 0);
         let sumTorques = vec3(0, 0, 0);
@@ -60,12 +53,13 @@ class PhysicsObject {
             sumForces = sumForces.plus(force.value);
             if ("loc" in force) {
                 sumTorques = sumTorques.plus(this.rotation.times(force.loc.to4(true)).to3().cross(force.value));
-                // sumTorques = sumTorques.plus(force.loc.cross(force.value));
-                console.log(this.rotation.times(force.loc.to4(true)));
             }
         }
-        // console.log(this.velocity);
-        // console.log(this.forces);
+
+        for (const torque of Object.values(this.torques)) {
+            sumTorques = sumTorques.plus(torque.value);
+        }
+
         
         const acceleration = sumForces.times(1 / this.mass);
         const angular_acceleration = sumTorques.times(1 / this.moment_inertia);
@@ -133,17 +127,27 @@ class PhysicsObject {
 
 class Plane extends PhysicsObject {
 
-    static THRUST = 100;
-    static DRAG_CONSTANT = 3;
-    static DRAG_CONSTANT_VER = 2;
-    static LIFT_POWER = 10;
+    static THRUST = 150;
+
+    static DRAG_CONSTANT = 1;
+    static DRAG_CONSTANT_VER = 20;
+
+    static LIFT_POWER = 0.1;
+
+
 
     constructor() {
-        super(new Plane_Model(), 2000, new Material(new Phong_Shader(), {
+        super(new Plane_Model(), 100, new Material(new Phong_Shader(), {
             ambient: 1, color: hex_color("#9d2b2b")
         }));
 
         this.thrust = false;
+        this.pitch_forward = false;
+        this.pitch_back = false;
+        this.roll_left = false;
+        this.roll_right = false;
+        this.yaw_left = false;
+        this.yaw_right = false;
 
         this.rotation = Mat4.identity();//Mat4.rotation(-Math.PI / 8, 1, 0, 0);
 
@@ -167,62 +171,127 @@ class Plane extends PhysicsObject {
     }
 
     update_drag() {
-
-        const norm_vel = this.velocity.equals(vec3(0, 0, 0)) ? 
-            vec3(0, 0, 0) : this.velocity.normalized();
+        const hor_vel = vec3(this.velocity[0], 0, this.velocity[2]);
+        const norm_vel = hor_vel.equals(vec3(0, 0, 0)) ? 
+            vec3(0, 0, 0) : hor_vel.normalized();
         norm_vel[1] = 0;
-
+        
+        const drag_const_hor = Plane.DRAG_CONSTANT + (this.brake ? 0.5 : 0);
         this.forces.drag_hor = {
             value: norm_vel.times(
-                (vec(this.velocity[0], this.velocity[2]).norm() ** 2) * -Plane.DRAG_CONSTANT
+                (vec(this.velocity[0], this.velocity[2]).norm() ** 2) * -drag_const_hor
                 ),
         };
 
         this.forces.drag_ver = {
-            // value: vec3(0, -Math.sign(this.velocity[1]) * (this.velocity[1] ** 2) * Plane.DRAG_CONSTANT_VER, 0),
-            value: vec3(0, 80, 0),
-            loc: vec3(0, 0, -0.1)
+            value: vec3(0, -Math.sign(this.velocity[1]) * (this.velocity[1] ** 2) * Plane.DRAG_CONSTANT_VER, 0),
+            // value: vec3(0, 80, 0),
+            // loc: vec3(0, 0, -0.1)
         }
 
     }
 
     update_lift() {
-        const head_point = this.rotation.times(vec4(0, 0, 1, 0)).to3();
-        let angle_atatck = Math.acos(
-            head_point.dot(this.velocity) / (this.velocity.norm() * head_point.norm())
-            );
-        if (isNaN(angle_atatck))
-            angle_atatck = 0;
+        // const head_point = this.rotation.times(vec4(0, 0, 1, 0)).to3();
+        // let angle_atatck = Math.acos(
+        //     head_point.dot(this.velocity) / (this.velocity.norm() * head_point.norm())
+        //     );
+        // if (isNaN(angle_atatck))
+        //     angle_atatck = 0;
         
-        let angle_atatck_deg = (180 / Math.PI) * angle_atatck;
+        // let angle_atatck_deg = (180 / Math.PI) * angle_atatck;
 
-        let lift_coefficient;
+        // let lift_coefficient;
 
-        if (angle_atatck_deg > 90 || angle_atatck_deg < -90) {
-            lift_coefficient = 0;
-        }
-        else if (angle_atatck_deg > -30 && angle_atatck_deg < 30) {
-            lift_coefficient = angle_atatck_deg / 30;
-        }
-        else if (angle_atatck_deg > 30) {
-            lift_coefficient = 1.5 - (angle_atatck_deg / 60);
-        }
-        else {
-            lift_coefficient = -1.5 - (angle_atatck_deg / 60);
-        }
+        // if (angle_atatck_deg > 90 || angle_atatck_deg < -90) {
+        //     lift_coefficient = 0;
+        // }
+        // else if (angle_atatck_deg > -30 && angle_atatck_deg < 30) {
+        //     lift_coefficient = angle_atatck_deg / 30;
+        // }
+        // else if (angle_atatck_deg > 30) {
+        //     lift_coefficient = 1.5 - (angle_atatck_deg / 60);
+        // }
+        // else {
+        //     lift_coefficient = -1.5 - (angle_atatck_deg / 60);
+        // }
 
-
+        const hor_speed = vec(this.velocity[0], this.velocity[2]).norm();
         this.forces.lift = {
-            value: vec3(0, (this.velocity.norm() ** 2) * lift_coefficient * Plane.LIFT_POWER, 0)
+            value: vec3(0, (hor_speed ** 2) * Plane.LIFT_POWER, 0),
+            // value: vec3(0, (this.velocity.norm() ** 2) * lift_coefficient * Plane.LIFT_POWER, 0),
+            loc: vec3(0, 0, 0.001),
         }
 
+    }
 
+    static ROLL_CORR = 3;
+    static PITCH_CORR = 3;
+
+    update_angular_correction() {
+        const top_point = this.rotation.times(vec4(0, 1, 0, 0)).to3();
+        const roll = Math.atan(top_point[0] / top_point[1]);
+        const pitch = Math.atan(top_point[2] / top_point[1]);
+        console.log(`${roll} ${pitch}`);
+
+        if (roll < 0.05) 
+        
+        this.torques.roll_corr = {
+            value: vec3(0, 0, -Plane.ROLL_CORR * roll)
+        };
+
+        this.torques.pitch_corr = {
+            value: vec3(-Plane.PITCH_CORR * pitch, 0, 0)
+        };
+
+    }
+
+    static DRAG_ANG_CONSTANT = 4;
+
+    update_angular_drag() {
+
+        const norm_vel = this.angular_velocity.equals(vec3(0, 0, 0)) ? 
+            vec3(0, 0, 0) : this.angular_velocity.normalized();
+
+        this.torques.ang_drag = {
+            value: norm_vel.times(-Plane.DRAG_ANG_CONSTANT * (this.angular_velocity.norm()))
+        }
+    }
+
+    static PITCH_STRENGTH = 1;
+    static ROLL_STRENGTH = 1;
+    static YAW_STRENGTH = 1;
+
+    update_steering() {
+
+        this.torques.pitch_forward = {
+            value: this.pitch_forward ? this.rotation.times(vec4(Plane.PITCH_STRENGTH, 0, 0, 0)).to3() : vec3(0, 0, 0)
+        };
+        this.torques.pitch_back = {
+            value: this.pitch_back ? this.rotation.times(vec4(-Plane.PITCH_STRENGTH, 0, 0, 0)).to3() : vec3(0, 0, 0)
+        };
+        this.torques.roll_left = {
+            value: this.roll_left ? this.rotation.times(vec4(0, 0, -Plane.ROLL_STRENGTH, 0)).to3() : vec3(0, 0, 0)
+        };
+        this.torques.roll_right = {
+            value: this.roll_right ? this.rotation.times(vec4(0, 0, Plane.ROLL_STRENGTH, 0)).to3() : vec3(0, 0, 0)
+        };
+        this.torques.yaw_left = {
+            value: this.yaw_left ? this.rotation.times(vec4(0, Plane.YAW_STRENGTH, 0, 0)).to3() : vec3(0, 0, 0)
+        };
+        this.torques.yaw_right = {
+            value: this.yaw_right ? this.rotation.times(vec4(0, -Plane.YAW_STRENGTH, 0, 0)).to3() : vec3(0, 0, 0)
+        };
+        
     }
 
     advance(time_amount) {
         this.update_thrust();
         this.update_drag();
-        // this.update_lift();
+        this.update_lift();
+        // this.update_angular_correction();
+        this.update_angular_drag();
+        this.update_steering();
         
         super.advance(time_amount);
     }
@@ -349,16 +418,26 @@ export class FinalProject extends Simulation {
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
 
         this.live_string(box => {
-            box.textContent = "Speed: " + this.plane.velocity.norm().toPrecision(2)
+            box.textContent = "Speed: " + this.plane.velocity.norm().toFixed(2)
         });
         this.new_line();
 
         this.live_string(box => {
-            box.textContent = "Position: " + this.plane.center
+            box.textContent = `Position: ${this.plane.center[0].toFixed(1)}, ${this.plane.center[1].toFixed(1)}, ${this.plane.center[2].toFixed(1)}`
         });
         this.new_line();
 
-        this.key_triggered_button("Thrust", ["u"], () => this.plane.thrust = true, undefined, () => this.plane.thrust = false);
+        this.key_triggered_button("Thrust", ["c"], () => this.plane.thrust = true, undefined, () => this.plane.thrust = false);
+        this.key_triggered_button("Air brakes", ["v"], () => this.plane.brake = true, undefined, () => this.plane.brake = false);
+        this.new_line();
+        this.key_triggered_button("Pitch Forward", ["u"], () => this.plane.pitch_forward = true, undefined, () => this.plane.pitch_forward = false);
+        this.key_triggered_button("Pitch Backward", ["j"], () => this.plane.pitch_back = true, undefined, () => this.plane.pitch_back = false);
+        this.new_line();
+        this.key_triggered_button("Roll Left", ["h"], () => this.plane.roll_left = true, undefined, () => this.plane.roll_left = false);
+        this.key_triggered_button("Roll Right", ["k"], () => this.plane.roll_right = true, undefined, () => this.plane.roll_right = false);
+        this.new_line();
+        this.key_triggered_button("Yaw Left", ["y"], () => this.plane.yaw_left = true, undefined, () => this.plane.yaw_left = false);
+        this.key_triggered_button("Yaw Right", ["i"], () => this.plane.yaw_right = true, undefined, () => this.plane.yaw_right = false);
         this.new_line();
 
         super.make_control_panel();
@@ -386,7 +465,7 @@ export class FinalProject extends Simulation {
         }
 
         let desired = Mat4.inverse((this.plane.drawn_location || Mat4.identity())
-            .times(Mat4.translation(0, 0, -14))
+            .times(Mat4.translation(0, 0, -16))
             .times(Mat4.rotation(Math.PI, 0, 1, 0))
             // .times(Mat4.rotation(-Math.PI / 8, 1, 0, 0))
             );
@@ -423,7 +502,7 @@ export class FinalProject extends Simulation {
             Mat4.rotation(Math.PI / 2, 1, 0, 0)
             .times(Mat4.translation(0, 0, 3))
             .times(Mat4.scale(5000, 5000, 0)),
-            this.materials.ground);
+                this.materials.ground);
 
         super.display(context, program_state);
     }
