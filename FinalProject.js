@@ -132,7 +132,7 @@ class Plane extends PhysicsObject {
     static DRAG_CONSTANT = 1;
     static DRAG_CONSTANT_VER = 20;
 
-    static LIFT_POWER = 0.1;
+    static LIFT_POWER = 0.3;
 
 
 
@@ -216,28 +216,28 @@ class Plane extends PhysicsObject {
         //     lift_coefficient = -1.5 - (angle_atatck_deg / 60);
         // }
 
+        let top_point = this.rotation.times(vec4(0, 1, 0, 0)).to3();
+        top_point[2] = 0;
         const hor_speed = vec(this.velocity[0], this.velocity[2]).norm();
         this.forces.lift = {
-            value: vec3(0, (hor_speed ** 2) * Plane.LIFT_POWER, 0),
+            value: top_point.times((hor_speed ** 2) * Plane.LIFT_POWER),
             // value: vec3(0, (this.velocity.norm() ** 2) * lift_coefficient * Plane.LIFT_POWER, 0),
-            loc: vec3(0, 0, 0.001),
+            loc: vec3(0, 0, 0.0005),
         }
 
     }
 
-    static ROLL_CORR = 3;
-    static PITCH_CORR = 3;
+    static ROLL_CORR = 0.5;
+    static PITCH_CORR = 0.5;
 
     update_angular_correction() {
         const top_point = this.rotation.times(vec4(0, 1, 0, 0)).to3();
         const roll = Math.atan(top_point[0] / top_point[1]);
         const pitch = Math.atan(top_point[2] / top_point[1]);
-        console.log(`${roll} ${pitch}`);
+        // console.log(`${roll} ${pitch}`);
 
-        if (roll < 0.05) 
-        
         this.torques.roll_corr = {
-            value: vec3(0, 0, -Plane.ROLL_CORR * roll)
+            value: vec3(0, 0, Plane.ROLL_CORR * roll)
         };
 
         this.torques.pitch_corr = {
@@ -246,7 +246,7 @@ class Plane extends PhysicsObject {
 
     }
 
-    static DRAG_ANG_CONSTANT = 4;
+    static DRAG_ANG_CONSTANT = 15;
 
     update_angular_drag() {
 
@@ -258,9 +258,9 @@ class Plane extends PhysicsObject {
         }
     }
 
-    static PITCH_STRENGTH = 1;
-    static ROLL_STRENGTH = 1;
-    static YAW_STRENGTH = 1;
+    static PITCH_STRENGTH = 3;
+    static ROLL_STRENGTH = 3;
+    static YAW_STRENGTH = 3;
 
     update_steering() {
 
@@ -289,7 +289,7 @@ class Plane extends PhysicsObject {
         this.update_thrust();
         this.update_drag();
         this.update_lift();
-        // this.update_angular_correction();
+        this.update_angular_correction();
         this.update_angular_drag();
         this.update_steering();
         
@@ -334,6 +334,7 @@ export class FinalProject extends Simulation {
         //     loc: vec3(0, 0, .2)
         // };
         this.plane = new Plane();
+        this.plane.center = vec3(0, 20, 0);
         this.bodies.push(this.plane);
     }
 
