@@ -2,11 +2,11 @@ import {defs, tiny} from './examples/common.js';
 import {Body, Simulation} from './examples/collisions-demo.js'
 
 const {
-    Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene,
+    Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene, Texture
 } = tiny;
 
 const {
-    Phong_Shader, Subdivision_Sphere
+    Phong_Shader, Subdivision_Sphere, Textured_Phong
 } = defs;
 
 
@@ -314,6 +314,11 @@ export class FinalProject extends Simulation {
 
         // *** Materials
         this.materials = {
+            watermelon: new Material(new Textured_Phong(), {
+                color: hex_color("#556B2F"),
+                ambient: 0.5, diffusivity: 0.1, specularity: 0.5,
+                texture: new Texture("assets/watermelon.png")
+            }),
             test: new Material(new Phong_Shader(), {
                 ambient: 1,
                 color: hex_color("#9d2b2b"),
@@ -336,6 +341,7 @@ export class FinalProject extends Simulation {
         this.plane = new Plane();
         this.plane.center = vec3(0, 20, 0);
         this.bodies.push(this.plane);
+        this.melon_flag = true;
     }
 
     draw_tom(context, program_state, model_transform) {
@@ -383,11 +389,15 @@ export class FinalProject extends Simulation {
         this.shapes.cone.draw(context, program_state, model_transform_inner_ear, this.materials.plastic.override({color:tom_ear_color}));
     }
 
-    draw_plane(context, program_state, model_transform) {
+    draw_plane(context, program_state, model_transform, draw_melon) {
         let plane_color = hex_color("#8b0000");
+        model_transform = model_transform.times(Mat4.rotation(Math.PI/2, 0,1,0));
+        this.draw_tom(context, program_state, model_transform.times(Mat4.translation(0,15,-5)));
         let upper = model_transform;
         let lower = model_transform;
+        let watermelon = model_transform;
         model_transform = model_transform.times(Mat4.scale(2,2,1));
+
 
         for(let i = 0; i < 4; i++){
             this.shapes.wheel.draw(context, program_state, model_transform, this.materials.plastic.override({color: plane_color}));
@@ -412,6 +422,13 @@ export class FinalProject extends Simulation {
         lower = lower.times(Mat4.scale(6, 0.2, 4.5));
         this.shapes.cube.draw(context, program_state, lower, this.materials.plastic.override({color: plane_color}));
 
+        //Watermelon
+        watermelon = watermelon.times(Mat4.translation(0,4,-5));
+        watermelon = watermelon.times(Mat4.scale(6,3,3));
+
+        if (draw_melon) {
+            this.shapes.sphere.draw(context,program_state, watermelon, this.materials.watermelon);
+        }
         return model_transform;
     }
 
@@ -440,7 +457,7 @@ export class FinalProject extends Simulation {
         this.key_triggered_button("Yaw Left", ["y"], () => this.plane.yaw_left = true, undefined, () => this.plane.yaw_left = false);
         this.key_triggered_button("Yaw Right", ["i"], () => this.plane.yaw_right = true, undefined, () => this.plane.yaw_right = false);
         this.new_line();
-
+        this.key_triggered_button("Watermelon Whammer", ["b"], () => this.melon_flag = true, undefined, () => this.melon_flag = false);
         super.make_control_panel();
     }
 
@@ -466,7 +483,7 @@ export class FinalProject extends Simulation {
         }
 
         let desired = Mat4.inverse((this.plane.drawn_location || Mat4.identity())
-            .times(Mat4.translation(0, 0, -16))
+            .times(Mat4.translation(-5, 10, -70))
             .times(Mat4.rotation(Math.PI, 0, 1, 0))
             // .times(Mat4.rotation(-Math.PI / 8, 1, 0, 0))
             );
@@ -505,7 +522,10 @@ export class FinalProject extends Simulation {
             .times(Mat4.scale(5000, 5000, 0)),
                 this.materials.ground);
 
-        super.display(context, program_state);
+        //super.display(context, program_state);
+        if (program_state.animate)
+            this.simulate(program_state.animation_delta_time);
+        this.draw_plane(context, program_state, this.plane.drawn_location, this.melon_flag);
     }
 }
 
