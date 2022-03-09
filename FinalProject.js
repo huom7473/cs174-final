@@ -125,6 +125,19 @@ class PhysicsObject {
 
 }
 
+class Watermelon extends PhysicsObject {
+
+    constructor(shape, material, center, velocity) {
+        super(shape, 50, material);
+        this.center = center;
+        this.velocity = velocity.plus(vec3(0,0,1));
+
+        this.forces.gravity = {
+            value: vec3(0, -PhysicsObject.ACC_GRAVITY * this.mass, 0)
+        };
+    }
+}
+
 class Plane extends PhysicsObject {
 
     static THRUST = 150;
@@ -342,6 +355,8 @@ export class FinalProject extends Simulation {
         this.plane.center = vec3(0, 20, 0);
         this.bodies.push(this.plane);
         this.melon_flag = true;
+        this.drop_watermelon = false;
+        this.melons = [];
     }
 
     draw_tom(context, program_state, model_transform) {
@@ -423,7 +438,7 @@ export class FinalProject extends Simulation {
         this.shapes.cube.draw(context, program_state, lower, this.materials.plastic.override({color: plane_color}));
 
         //Watermelon
-        watermelon = watermelon.times(Mat4.translation(0,4,-5));
+        watermelon = watermelon.times(Mat4.translation(5,4,-5));
         watermelon = watermelon.times(Mat4.scale(6,3,3));
 
         if (draw_melon) {
@@ -445,19 +460,26 @@ export class FinalProject extends Simulation {
         });
         this.new_line();
 
-        this.key_triggered_button("Thrust", ["c"], () => this.plane.thrust = true, undefined, () => this.plane.thrust = false);
+        this.key_triggered_button("Thrust", [" "], () => this.plane.thrust = true, undefined, () => this.plane.thrust = false);
         this.key_triggered_button("Air brakes", ["v"], () => this.plane.brake = true, undefined, () => this.plane.brake = false);
         this.new_line();
-        this.key_triggered_button("Pitch Forward", ["u"], () => this.plane.pitch_forward = true, undefined, () => this.plane.pitch_forward = false);
-        this.key_triggered_button("Pitch Backward", ["j"], () => this.plane.pitch_back = true, undefined, () => this.plane.pitch_back = false);
+        this.key_triggered_button("Pitch Forward", ["s"], () => this.plane.pitch_forward = true, undefined, () => this.plane.pitch_forward = false);
+        this.key_triggered_button("Pitch Backward", ["w"], () => this.plane.pitch_back = true, undefined, () => this.plane.pitch_back = false);
         this.new_line();
-        this.key_triggered_button("Roll Left", ["h"], () => this.plane.roll_left = true, undefined, () => this.plane.roll_left = false);
-        this.key_triggered_button("Roll Right", ["k"], () => this.plane.roll_right = true, undefined, () => this.plane.roll_right = false);
+        this.key_triggered_button("Roll Left", ["a"], () => this.plane.roll_left = true, undefined, () => this.plane.roll_left = false);
+        this.key_triggered_button("Roll Right", ["d"], () => this.plane.roll_right = true, undefined, () => this.plane.roll_right = false);
         this.new_line();
         this.key_triggered_button("Yaw Left", ["y"], () => this.plane.yaw_left = true, undefined, () => this.plane.yaw_left = false);
         this.key_triggered_button("Yaw Right", ["i"], () => this.plane.yaw_right = true, undefined, () => this.plane.yaw_right = false);
         this.new_line();
-        this.key_triggered_button("Watermelon Whammer", ["b"], () => this.melon_flag = true, undefined, () => this.melon_flag = false);
+        this.key_triggered_button("Watermelon Whammer", ["b"],
+            () => {
+                if (!this.melon_flag) return;
+                this.drop_watermelon = true;
+                this.melon_flag = false;
+                setTimeout(() => this.melon_flag = true, 2000);
+            },
+            undefined);
         super.make_control_panel();
     }
 
@@ -466,9 +488,18 @@ export class FinalProject extends Simulation {
         //     this.plane.center[1] = -2.5;
         //     this.plane.velocity[1] = 0;
         // }
+
     }
 
     display(context, program_state) {
+
+        if(this.drop_watermelon){
+            this.drop_watermelon = false;
+            let melon = new Watermelon(this.shapes.sphere, this.materials.watermelon, this.plane.center.minus(vec3(5,-2,0)), this.plane.velocity);
+            this.bodies.push(melon);
+            this.melons.push(melon);
+            console.log("melon toggled");
+        }
 
         context.context.clearColor.apply(context.context, hex_color("#4fa8b8")); // background
 
@@ -483,9 +514,9 @@ export class FinalProject extends Simulation {
         }
 
         let desired = Mat4.inverse((this.plane.drawn_location || Mat4.identity())
+            .times(Mat4.rotation(Math.PI / 6, 1, 0, 0))
             .times(Mat4.translation(-5, 10, -70))
             .times(Mat4.rotation(Math.PI, 0, 1, 0))
-            // .times(Mat4.rotation(-Math.PI / 8, 1, 0, 0))
             );
         desired = desired.map((x,i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.2));
         program_state.set_camera(desired);
@@ -516,16 +547,21 @@ export class FinalProject extends Simulation {
         // }
         // this.ball.draw(context, program_state);
 
-        this.shapes.square.draw(context, program_state, 
+        /*this.shapes.square.draw(context, program_state,
             Mat4.rotation(Math.PI / 2, 1, 0, 0)
             .times(Mat4.translation(0, 0, 3))
             .times(Mat4.scale(5000, 5000, 0)),
                 this.materials.ground);
-
+*/
         //super.display(context, program_state);
         if (program_state.animate)
             this.simulate(program_state.animation_delta_time);
         this.draw_plane(context, program_state, this.plane.drawn_location, this.melon_flag);
+
+        for(let b of this.melons){
+            let model_transform_melon = b.drawn_location.times(Mat4.rotation(Math.PI / 2, 0,1,0)).times(Mat4.scale(6,3,3));
+            this.shapes.sphere.draw(context, program_state, model_transform_melon, this.materials.watermelon);
+        }
     }
 }
 
