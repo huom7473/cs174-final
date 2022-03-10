@@ -578,14 +578,60 @@ export class FinalProject extends Simulation {
     make_control_panel() {
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
 
+        
         this.live_string(box => {
-            box.textContent = "Speed: " + this.plane.velocity.norm().toFixed(2)
+            const head_point = this.plane.rotation.times(vec4(0, 0, 1, 0)).to3();
+            // let angle = (180 / Math.PI) * Math.atan2(head_point[2], head_point[0]) + 180;//Math.PI;
+            let angle = Math.atan2(head_point[2], head_point[0]) + Math.PI;
+            // angle = ((angle % 360) + 360) % 360;
+            let dir = " ";
+            dir += (angle > (9 * Math.PI / 8) && angle <= (11 * Math.PI / 8)) ? "\\" : " ";
+            dir += (angle > (11 * Math.PI / 8) && angle <= (13 * Math.PI / 8)) ? "|" : " ";
+            dir += (angle > (13 * Math.PI / 8) && angle <= (15 * Math.PI / 8)) ? "/" : " ";
+            dir += " ";
+            box.textContent = dir;
+            box.style["white-space"] = "pre-wrap";
         });
         this.new_line();
+        this.live_string(box => {
+            const head_point = this.plane.rotation.times(vec4(0, 0, 1, 0)).to3();
+            // let angle = (180 / Math.PI) * Math.atan2(head_point[2], head_point[0]) + 180;//Math.PI;
+            let angle = Math.atan2(head_point[2], head_point[0]) + Math.PI;
+            // angle = ((angle % 360) + 360) % 360;
+            let dir = "";
+            dir += (angle > (7 * Math.PI / 8) && angle <= (9 * Math.PI / 8)) ? "--" : "  ";
+            dir += "●";
+            dir += (angle > (15 * Math.PI / 8) || angle < (1 * Math.PI / 8)) ? "--" : "  ";
+            box.textContent = dir;
+            box.style["white-space"] = "pre-wrap";
+        });
+        this.new_line();
+        this.live_string(box => {
+            const head_point = this.plane.rotation.times(vec4(0, 0, 1, 0)).to3();
+            // let angle = (180 / Math.PI) * Math.atan2(head_point[2], head_point[0]) + 180;//Math.PI;
+            let angle = Math.atan2(head_point[2], head_point[0]) + Math.PI;
+            // angle = ((angle % 360) + 360) % 360;
+            let dir = " ";
+            dir += (angle > (5 * Math.PI / 8) && angle <= (7 * Math.PI / 8)) ? "/" : " ";
+            dir += (angle > (3 * Math.PI / 8) && angle <= (5 * Math.PI / 8)) ? "|" : " ";
+            dir += (angle > (1 * Math.PI / 8) && angle <= (3 * Math.PI / 8)) ? "\\" : " ";
+            dir += " ";
+            box.textContent = dir;
+            box.style["white-space"] = "pre-wrap";
+        });
+        this.new_line();
+        
+
+        this.live_string(box => {
+            box.textContent = "Speed: " + this.plane.velocity.norm().toFixed(2) + " | ";
+            box.style["white-space"] = "pre-wrap";
+        });
 
         this.live_string(box => {
             box.textContent = `Position: ${this.plane.center[0].toFixed(1)}, ${this.plane.center[1].toFixed(1)}, ${this.plane.center[2].toFixed(1)}`
         });
+
+        this.new_line();
         this.new_line();
 
         this.key_triggered_button("Thrust", [" "], () => this.plane.thrust = true, undefined, () => this.plane.thrust = false);
@@ -608,7 +654,7 @@ export class FinalProject extends Simulation {
                 setTimeout(() => this.melon_flag = true, 2000);
             },
             undefined);
-        super.make_control_panel();
+        // super.make_control_panel();
     }
 
     update_state(dt) {
