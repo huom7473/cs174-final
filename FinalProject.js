@@ -70,7 +70,7 @@ class Plane_Model extends Shape {
 
 class PhysicsObject {
 
-    static ACC_GRAVITY = 0.16;
+    static ACC_GRAVITY = 0.6;
 
     constructor(shape, mass, material) {
         this.shape = shape;
@@ -200,12 +200,12 @@ class Watermelon extends PhysicsObject {
 
 class Plane extends PhysicsObject {
 
-    static THRUST = 30;
+    static THRUST = 90;
 
-    static DRAG_CONSTANT = 3;
-    static DRAG_CONSTANT_VER = 20;
+    static DRAG_CONSTANT = 4;
+    static DRAG_CONSTANT_VER = 8;
 
-    static LIFT_POWER = 4;
+    static LIFT_POWER = 3;
 
 
 
@@ -276,7 +276,7 @@ class Plane extends PhysicsObject {
 
     }
 
-    static ROLL_CORR = 0.5;
+    static ROLL_CORR = 0.1;
     static PITCH_CORR = 0.5;
 
     update_angular_correction() {
@@ -307,9 +307,9 @@ class Plane extends PhysicsObject {
         }
     }
 
-    static PITCH_STRENGTH = 0.5;
-    static ROLL_STRENGTH = 0.5;
-    static YAW_STRENGTH = 0.5;
+    static PITCH_STRENGTH = 1.6;
+    static ROLL_STRENGTH = 1.6;
+    static YAW_STRENGTH = 1.2;
 
     update_steering() {
 
@@ -360,7 +360,8 @@ export class FinalProject extends Simulation {
             wheel: new defs.Capped_Cylinder(15,15),
             square: new defs.Square(),
             cloud: new Cloud(),
-            ground: new Ground()
+            ground: new Ground(),
+            axes: new defs.Axis_Arrows()
         };
 
         // *** Materials
@@ -652,7 +653,7 @@ export class FinalProject extends Simulation {
 
         let desired = Mat4.inverse((this.plane.drawn_location || Mat4.identity())
             .times(Mat4.rotation(Math.PI / 6, 1, 0, 0))
-            .times(Mat4.translation(-5, 10, -60))
+            .times(Mat4.translation(0, 0, -60))
             //.times(Mat4.translation(60, 10, -15))
             .times(Mat4.rotation(Math.PI, 0, 1, 0))
             );
@@ -671,7 +672,10 @@ export class FinalProject extends Simulation {
         //super.display(context, program_state);
         if (program_state.animate)
             this.simulate(program_state.animation_delta_time);
-        this.draw_plane(context, program_state, this.plane.drawn_location, this.melon_flag);
+        this.shapes.axes.draw(context, program_state, this.plane.drawn_location.times(Mat4.scale(6, 6, 6)), this.materials.test);
+        let transform_plane = this.plane.drawn_location
+            .times(Mat4.translation(5, -5, 5));
+        this.draw_plane(context, program_state, transform_plane, this.melon_flag);
         this.cat.display(context, program_state);
 
         for (let melon of this.melons) {
