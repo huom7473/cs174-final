@@ -125,16 +125,43 @@ class PhysicsObject {
 
 }
 
+class Cat extends PhysicsObject {
+    constructor(shape, material, center, project) {
+        super(shape, 50, material);
+        this.shapes = project.shapes;
+        this.center = center;
+    }
+
+    display(context, program_state) {
+        this.shapes.cube.draw(context, program_state, Mat4.translation(...this.center).times(Mat4.scale(4, 8, 4)).times(Mat4.translation(0, 1, 0)), this.material);
+    }
+}
+
 class Watermelon extends PhysicsObject {
 
     constructor(shape, material, center, velocity) {
         super(shape, 50, material);
         this.center = center;
-        this.velocity = velocity.plus(vec3(0,0,1));
-
+        this.inverse = this.drawn_location;
+        this.velocity = vec3(velocity[0],0,velocity[2]); // velocity.plus(vec3(0,0,1));
+        this.width = 5;
         this.forces.gravity = {
             value: vec3(0, -PhysicsObject.ACC_GRAVITY * this.mass, 0)
         };
+    }
+
+    static intersect_cube(p, margin = 0) {
+        return p.every(value => value >= -1 - margin && value <= 1 + margin)
+    }
+
+    check_colliding(cat) {
+        const T = this.inverse.times(cat.drawn_location, this.temp_matrix);
+
+        let points = Vector3.cast(
+            [-1, -1, -1], [-1, -1, 1], [-1, 1, -1], [-1, 1, 1], [1, -1, -1], [1, -1, 1], [1, 1, -1], [1, 1, 1],);
+        let intersect_test = Watermelon.intersect_cube;
+        return points.some(p =>
+            intersect_test(T.times(p.to4(1)).to3(), this.width));
     }
 }
 
@@ -338,6 +365,8 @@ export class FinalProject extends Simulation {
             }),
             plastic: new Material(new defs.Phong_Shader(),
                 {ambient: .4, diffusivity: .6, specularity: 0, color: hex_color("#ffffff")}),
+            collided: new Material(new defs.Phong_Shader(),
+                {ambient: .4, diffusivity: .6, specularity: 0, color: hex_color("#ff0000")}),
             ground: new Material(new defs.Phong_Shader(), {
                 ambient: 1,
                 color: hex_color("#2e521d"),
@@ -352,8 +381,10 @@ export class FinalProject extends Simulation {
         //     loc: vec3(0, 0, .2)
         // };
         this.plane = new Plane();
+        this.cat = new Cat(this.shapes.cube, this.materials.plastic.override({color: color(Math.random(), Math.random(), Math.random(), 1.)}), vec3(-5, 0, 100), this);
         this.plane.center = vec3(0, 20, 0);
         this.bodies.push(this.plane);
+        this.bodies.push(this.cat);
         this.melon_flag = true;
         this.drop_watermelon = false;
         this.melons = [];
@@ -375,14 +406,14 @@ export class FinalProject extends Simulation {
             .times(Mat4.rotation(Math.PI / 6, 0, 0, 1))
             .times(Mat4.translation(0, 3.5, 0))
             .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
-            .times(Mat4.scale(1, 0.1, 1));
+            .times(Mat4.scale(2, 0.1, 2));
         this.shapes.cone.draw(context, program_state, model_transform_ear, this.materials.plastic.override({color:tom_color}));
         model_transform_ear = model_transform_original
             .times(Mat4.rotation(Math.PI / 2, 0, 1, 0))
             .times(Mat4.rotation(-Math.PI / 6, 0, 0, 1))
             .times(Mat4.translation(0, 3.5, 0))
             .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
-            .times(Mat4.scale(1, 0.1, 1));
+            .times(Mat4.scale(2  , 0.1, 2));
         this.shapes.cone.draw(context, program_state, model_transform_ear, this.materials.plastic.override({color:tom_color}));
 
         //inner ear
@@ -488,6 +519,18 @@ export class FinalProject extends Simulation {
         //     this.plane.center[1] = -2.5;
         //     this.plane.velocity[1] = 0;
         // }
+        for(let a of this.melons){
+            if(a.drawn_location != null){
+                a.inverse = Mat4.inverse(a.drawn_location);
+                if (a.check_colliding(this.cat)) {
+                    console.log("colliding")
+                    this.cat.material = this.materials.collided;
+                } else{
+                    this.cat.material = this.materials.plastic;
+                }
+            }
+
+        }
 
     }
 
@@ -515,7 +558,8 @@ export class FinalProject extends Simulation {
 
         let desired = Mat4.inverse((this.plane.drawn_location || Mat4.identity())
             .times(Mat4.rotation(Math.PI / 6, 1, 0, 0))
-            .times(Mat4.translation(-5, 10, -70))
+            .times(Mat4.translation(-5, 10, -50))
+                //.times(Mat4.translation(40, 10, -15))
             .times(Mat4.rotation(Math.PI, 0, 1, 0))
             );
         desired = desired.map((x,i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.2));
@@ -547,16 +591,18 @@ export class FinalProject extends Simulation {
         // }
         // this.ball.draw(context, program_state);
 
-        /*this.shapes.square.draw(context, program_state,
+        this.shapes.square.draw(context, program_state,
             Mat4.rotation(Math.PI / 2, 1, 0, 0)
             .times(Mat4.translation(0, 0, 3))
             .times(Mat4.scale(5000, 5000, 0)),
                 this.materials.ground);
-*/
+
         //super.display(context, program_state);
         if (program_state.animate)
             this.simulate(program_state.animation_delta_time);
         this.draw_plane(context, program_state, this.plane.drawn_location, this.melon_flag);
+        this.cat.display(context, program_state);
+        //this.shapes.cube.draw(context, program_state, this.cat.drawn_location.times(Mat4.scale(3,3,3)), this.cat.material);
 
         for(let b of this.melons){
             let model_transform_melon = b.drawn_location.times(Mat4.rotation(Math.PI / 2, 0,1,0)).times(Mat4.scale(6,3,3));
