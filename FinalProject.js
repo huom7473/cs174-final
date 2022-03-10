@@ -69,15 +69,6 @@ class PhysicsObject {
     }
 
     advance(time_amount) {
-        // for (let x of Object.values(this.forces)) {
-        //     for (let y of x.value) {
-        //         if (isNaN(y)) {
-        //             console.log(this.forces);
-        //             console.log(this.velocity);
-        //         }
-        //     }
-        // }
-        
         const [acceleration, angular_acceleration] = this.calc_acceleration();
         
         this.velocity = this.velocity.plus(acceleration.times(time_amount));
@@ -99,30 +90,6 @@ class PhysicsObject {
             .times(this.blend_rotation(alpha));
             // .times(Mat4.scale(...this.size));
     }
-
-    // draw(context, program_state) {
-    //     if (this.lastDrawnTime === null) {
-    //         this.lastDrawnTime = program_state.animation_time;
-    //     }
-
-    //     let dt = (program_state.animation_time - this.lastDrawnTime) / 1000;
-
-    //     let sumForces = Object.values(this.forces).reduce(
-    //         (previous, current) => previous.plus(current), vec3(0, 0, 0)
-    //     );
-
-    //     let acceleration = sumForces.copy();
-    //     acceleration.scale_by(1 / this.mass);
-
-    //     this.velocity = this.velocity.plus(acceleration.times(dt));
-
-    //     let displacement = this.velocity.times(dt);
-    //     this.model_transform.pre_multiply(Mat4.translation(...displacement));
-    //     this.shape.draw(context, program_state, this.model_transform, this.material);
-
-    //     this.lastDrawnTime = program_state.animation_time;
-    // }
-
 }
 
 class Cat extends PhysicsObject {
@@ -130,10 +97,25 @@ class Cat extends PhysicsObject {
         super(shape, 50, material);
         this.shapes = project.shapes;
         this.center = center;
+        this.center[1] = 0;
+        this.hit = false;
     }
 
+    collide(context, program_state) {
+        this.hit = true;
+        this.hit_time = program_state.animation_time;
+    }
+
+    getLocation() {
+        return Mat4.translation(...this.center);
+    }
     display(context, program_state) {
-        this.shapes.cube.draw(context, program_state, Mat4.translation(...this.center).times(Mat4.scale(4, 8, 4)).times(Mat4.translation(0, 1, 0)), this.material);
+        if (this.hit) {
+            let scaling_factor = Math.min((program_state.animation_time - this.hit_time) / 100, 5);
+            this.shapes.cube.draw(context, program_state, Mat4.translation(...this.center).times(Mat4.scale(4, 8, 4 + scaling_factor)).times(Mat4.translation(0, 1, 0)), this.material);
+        }
+        else
+            this.shapes.cube.draw(context, program_state, Mat4.translation(...this.center).times(Mat4.scale(4, 8, 4)).times(Mat4.translation(0, 1, 0)), this.material);
     }
 }
 
@@ -144,7 +126,8 @@ class Watermelon extends PhysicsObject {
         this.center = center;
         this.inverse = this.drawn_location;
         this.velocity = vec3(velocity[0],0,velocity[2]); // velocity.plus(vec3(0,0,1));
-        this.width = 5;
+        this.width = 3;
+        this.collided = false;
         this.forces.gravity = {
             value: vec3(0, -PhysicsObject.ACC_GRAVITY * this.mass, 0)
         };
@@ -154,11 +137,17 @@ class Watermelon extends PhysicsObject {
         return p.every(value => value >= -1 - margin && value <= 1 + margin)
     }
 
+    collide() {
+        this.collided = true;
+    }
+
     check_colliding(cat) {
-        const T = this.inverse.times(cat.drawn_location, this.temp_matrix);
+        //console.log("checking");
+
+        const T = this.inverse.times(cat.getLocation(), this.temp_matrix);
 
         let points = Vector3.cast(
-            [-1, -1, -1], [-1, -1, 1], [-1, 1, -1], [-1, 1, 1], [1, -1, -1], [1, -1, 1], [1, 1, -1], [1, 1, 1],);
+            [-4, 0, -4], [-4, 0, 4], [-4, 16, -4], [-4, 16, 4], [4, 0, -4], [4, 0, 4], [4, 16, -4], [4, 16, 4],);
         let intersect_test = Watermelon.intersect_cube;
         return points.some(p =>
             intersect_test(T.times(p.to4(1)).to3(), this.width));
@@ -232,30 +221,6 @@ class Plane extends PhysicsObject {
     }
 
     update_lift() {
-        // const head_point = this.rotation.times(vec4(0, 0, 1, 0)).to3();
-        // let angle_atatck = Math.acos(
-        //     head_point.dot(this.velocity) / (this.velocity.norm() * head_point.norm())
-        //     );
-        // if (isNaN(angle_atatck))
-        //     angle_atatck = 0;
-        
-        // let angle_atatck_deg = (180 / Math.PI) * angle_atatck;
-
-        // let lift_coefficient;
-
-        // if (angle_atatck_deg > 90 || angle_atatck_deg < -90) {
-        //     lift_coefficient = 0;
-        // }
-        // else if (angle_atatck_deg > -30 && angle_atatck_deg < 30) {
-        //     lift_coefficient = angle_atatck_deg / 30;
-        // }
-        // else if (angle_atatck_deg > 30) {
-        //     lift_coefficient = 1.5 - (angle_atatck_deg / 60);
-        // }
-        // else {
-        //     lift_coefficient = -1.5 - (angle_atatck_deg / 60);
-        // }
-
         let top_point = this.rotation.times(vec4(0, 1, 0, 0)).to3();
         top_point[2] = 0;
         const hor_speed = vec(this.velocity[0], this.velocity[2]).norm();
@@ -298,9 +263,9 @@ class Plane extends PhysicsObject {
         }
     }
 
-    static PITCH_STRENGTH = 3;
-    static ROLL_STRENGTH = 3;
-    static YAW_STRENGTH = 3;
+    static PITCH_STRENGTH = 0.5;
+    static ROLL_STRENGTH = 0.5;
+    static YAW_STRENGTH = 0.5;
 
     update_steering() {
 
@@ -381,12 +346,13 @@ export class FinalProject extends Simulation {
         //     loc: vec3(0, 0, .2)
         // };
         this.plane = new Plane();
-        this.cat = new Cat(this.shapes.cube, this.materials.plastic.override({color: color(Math.random(), Math.random(), Math.random(), 1.)}), vec3(-5, 0, 100), this);
+        let cat_color = [hex_color("#000000"), hex_color("#e8e0b6"), hex_color("#ffa500")][Math.floor(Math.random() * 3)];
+        this.cat = new Cat(this.shapes.cube, this.materials.plastic.override({color: cat_color}), vec3(-5, 0, 100), this);
         this.plane.center = vec3(0, 20, 0);
         this.bodies.push(this.plane);
-        this.bodies.push(this.cat);
         this.melon_flag = true;
         this.drop_watermelon = false;
+        this.score = 0;
         this.melons = [];
     }
 
@@ -482,6 +448,11 @@ export class FinalProject extends Simulation {
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
 
         this.live_string(box => {
+            box.textContent = "Score: " + this.score
+        });
+        this.new_line();
+
+        this.live_string(box => {
             box.textContent = "Speed: " + this.plane.velocity.norm().toFixed(2)
         });
         this.new_line();
@@ -515,28 +486,12 @@ export class FinalProject extends Simulation {
     }
 
     update_state(dt) {
-        // if (this.plane.center[1] < -2.5) {
-        //     this.plane.center[1] = -2.5;
-        //     this.plane.velocity[1] = 0;
-        // }
-        for(let a of this.melons){
-            if(a.drawn_location != null){
-                a.inverse = Mat4.inverse(a.drawn_location);
-                if (a.check_colliding(this.cat)) {
-                    console.log("colliding")
-                    this.cat.material = this.materials.collided;
-                } else{
-                    this.cat.material = this.materials.plastic;
-                }
-            }
 
-        }
 
     }
 
     display(context, program_state) {
-
-        if(this.drop_watermelon){
+        if (this.drop_watermelon){
             this.drop_watermelon = false;
             let melon = new Watermelon(this.shapes.sphere, this.materials.watermelon, this.plane.center.minus(vec3(5,-2,0)), this.plane.velocity);
             this.bodies.push(melon);
@@ -546,10 +501,6 @@ export class FinalProject extends Simulation {
 
         context.context.clearColor.apply(context.context, hex_color("#4fa8b8")); // background
 
-        // let desired = Mat4.look_at(this.plane.center.plus(vec3(0, 0, -5)) || vec3(0, 0, 0),
-        //     this.plane.drawn_location || Mat4.identity(),
-        //     vec3(0, 1, 0));
-        
         if (!context.scratchpad.controls) {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
             // Define the global camera and projection matrices, which are stored in program_state.
@@ -559,7 +510,7 @@ export class FinalProject extends Simulation {
         let desired = Mat4.inverse((this.plane.drawn_location || Mat4.identity())
             .times(Mat4.rotation(Math.PI / 6, 1, 0, 0))
             .times(Mat4.translation(-5, 10, -60))
-                //.times(Mat4.translation(40, 10, -15))
+            //.times(Mat4.translation(60, 10, -15))
             .times(Mat4.rotation(Math.PI, 0, 1, 0))
             );
         desired = desired.map((x,i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.1));
@@ -572,28 +523,8 @@ export class FinalProject extends Simulation {
             const light_position = vec4(0, 5, 5, 1);
         program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 1000)];
 
-        // program_state.set_camera(Mat4.look_at(this.ball.center.plus(vec3(10, 0, 0)), this.ball.center, vec3(0, 1, 0)));
-
-        // display():  Called once per frame of animation.
-        // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
-        
-        // let model_transform_plane = Mat4.identity();
-        // let model_transform_tom = Mat4.translation(2, 15.5, -5);
-        // const t = this.t = program_state.animation_time / 1000;
-        // this.draw_tom(context, program_state, model_transform_tom);
-        // this.draw_plane(context, program_state, model_transform_plane);
-
-
-
-        // if (this.ball.model_transform[1][3] < 0) {
-        //     // this.ball.addForce("up", vec3(0, 250, 0));
-        //     this.ball.velocity = vec3(0, 10, 0);
-        // }
-        // this.ball.draw(context, program_state);
-
         this.shapes.square.draw(context, program_state,
             Mat4.rotation(Math.PI / 2, 1, 0, 0)
-            .times(Mat4.translation(0, 0, 3))
             .times(Mat4.scale(5000, 5000, 0)),
                 this.materials.ground);
 
@@ -602,12 +533,36 @@ export class FinalProject extends Simulation {
             this.simulate(program_state.animation_delta_time);
         this.draw_plane(context, program_state, this.plane.drawn_location, this.melon_flag);
         this.cat.display(context, program_state);
-        //this.shapes.cube.draw(context, program_state, this.cat.drawn_location.times(Mat4.scale(3,3,3)), this.cat.material);
 
-        for(let b of this.melons){
-            let model_transform_melon = b.drawn_location.times(Mat4.rotation(Math.PI / 2, 0,1,0)).times(Mat4.scale(6,3,3));
+        for (let melon of this.melons) {
+            if (melon.drawn_location != null){
+                melon.inverse = Mat4.inverse(melon.drawn_location);
+                if (melon.check_colliding(this.cat)) {
+                    this.cat.collide(context, program_state);
+                    melon.collide();
+                    this.score += 1;
+                    console.log(this.score);
+                    continue;
+                }
+            }
+            let model_transform_melon = melon.drawn_location.times(Mat4.rotation(Math.PI / 2, 0,1,0)).times(Mat4.scale(6,3,3));
             this.shapes.sphere.draw(context, program_state, model_transform_melon, this.materials.watermelon);
         }
+
+        const MIN_CAT_DIST = 15;
+        const MAX_CAT_DIST = 40;
+        if (this.cat.center[2] < this.plane.center[2] - 20) {
+            console.log("hi");
+            let cat_color = [hex_color("#000000"), hex_color("#e8e0b6"), hex_color("#ffa500")][Math.floor(Math.random() * 3)];
+            let cat_position = vec3(
+                this.plane.center[0] + (Math.random() < 0.5 ? 1 : -1) * (Math.random() * (MAX_CAT_DIST - MIN_CAT_DIST) + MIN_CAT_DIST),
+                0,
+                this.plane.center[2] + 8 * (Math.random() * (MAX_CAT_DIST - MIN_CAT_DIST) + MIN_CAT_DIST)
+            )
+            this.cat = new Cat(this.shapes.cube, this.materials.plastic.override({color: cat_color}), cat_position, this);
+        }
+
+        this.melons = this.melons.filter(melon => !melon.collided);
     }
 }
 
