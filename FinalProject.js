@@ -10,6 +10,50 @@ const {
 } = defs;
 
 
+class Cloud extends Shape {
+    constructor() {
+        super("position", "normal", "texture_coord");
+        defs.Subdivision_Sphere.insert_transformed_copy_into(this, [4],
+            Mat4.translation(4.5, 0, 0)
+            .times(Mat4.scale(4, 3, 4))
+        );
+        defs.Subdivision_Sphere.insert_transformed_copy_into(this, [4],
+            Mat4.translation(3, -1, 0)
+            .times(Mat4.scale(4, 3.2, 4))
+        );
+        defs.Subdivision_Sphere.insert_transformed_copy_into(this, [4],
+            Mat4.translation(1, -1, 0)
+            .times(Mat4.scale(3, 3.2, 5))
+        );
+        defs.Subdivision_Sphere.insert_transformed_copy_into(this, [4],
+            Mat4.translation(0, 1.3, 0)
+            .times(Mat4.scale(3, 3, 4))
+        );
+        defs.Subdivision_Sphere.insert_transformed_copy_into(this, [4],
+            Mat4.translation(-2, -0.2, 0)
+            .times(Mat4.scale(4, 4, 4))
+        );
+        defs.Subdivision_Sphere.insert_transformed_copy_into(this, [4],
+            Mat4.translation(-4.5, 0, 0)
+            .times(Mat4.scale(3, 3, 3))
+        );
+    }
+}
+
+class Ground extends Shape {
+    constructor() {
+        super("position", "normal", "texture_coord");
+        
+        defs.Square.insert_transformed_copy_into(this, [],
+            Mat4.rotation(Math.PI / 2, 1, 0, 0)
+            .times(Mat4.translation(0, 0, 0))
+            .times(Mat4.scale(5000, 5000, 0))
+        );
+        this.arrays.texture_coord = [vec(0, 0), vec(500, 0), vec(0, 500), vec(500, 500)];
+    }
+}
+
+
 class Plane_Model extends Shape {
     constructor() {
         super("position", "normal", "texture_coord");
@@ -167,7 +211,7 @@ class Watermelon extends PhysicsObject {
 
 class Plane extends PhysicsObject {
 
-    static THRUST = 20;
+    static THRUST = 40;
 
     static DRAG_CONSTANT = 3;
     static DRAG_CONSTANT_VER = 20;
@@ -349,7 +393,9 @@ export class FinalProject extends Simulation {
             cube: new defs.Cube(),
             cone: new defs.Closed_Cone(30, 30),
             wheel: new defs.Capped_Cylinder(15,15),
-            square: new defs.Square()
+            square: new defs.Square(),
+            cloud: new Cloud(),
+            ground: new Ground()
         };
 
         // *** Materials
@@ -367,10 +413,15 @@ export class FinalProject extends Simulation {
                 {ambient: .4, diffusivity: .6, specularity: 0, color: hex_color("#ffffff")}),
             collided: new Material(new defs.Phong_Shader(),
                 {ambient: .4, diffusivity: .6, specularity: 0, color: hex_color("#ff0000")}),
-            ground: new Material(new defs.Phong_Shader(), {
+            ground: new Material(new defs.Textured_Phong(), {
                 ambient: 1,
                 color: hex_color("#2e521d"),
+                texture: new Texture("assets/grass2.png")
             }),
+            cloud: new Material(new defs.Phong_Shader(), {
+                ambient: 1,
+                color: color(1, 1, 1, 0.1),
+            })
         }
 
         this.initial_camera_location = Mat4.look_at(vec3(20, 0, 0), vec3(0, 0, 0), vec3(0, 1, 0));
@@ -388,6 +439,8 @@ export class FinalProject extends Simulation {
         this.melon_flag = true;
         this.drop_watermelon = false;
         this.melons = [];
+
+        this.clouds = this.generate_clouds();
     }
 
     draw_tom(context, program_state, model_transform) {
@@ -476,6 +529,50 @@ export class FinalProject extends Simulation {
             this.shapes.sphere.draw(context,program_state, watermelon, this.materials.watermelon);
         }
         return model_transform;
+    }
+
+    generate_clouds() {
+        const MIN_HEIGHT = 20;
+        const MAX_HEIGHT = 180;
+        const MIN_POS = -3000;
+        const MAX_POS = 3000;
+        const MIN_SCALE_X = 7;
+        const MAX_SCALE_X = 12;
+        const MIN_SCALE_Y = 4;
+        const MAX_SCALE_Y = 8;
+        const MIN_SCALE_Z = 4;
+        const MAX_SCALE_Z = 8;
+        const NUM_CLOUDS = 600;
+
+        let clouds = [];
+
+        let model_transform;
+        let height;
+        let scale_x;
+        let scale_y;
+        let scale_z;
+        let x;
+        let z;
+        let rotation;
+        for (let i = 0; i < NUM_CLOUDS; i++) {
+            x = Math.random() * (MAX_POS - MIN_POS) + MIN_POS;
+            z = Math.random() * (MAX_POS - MIN_POS) + MIN_POS;
+            height = Math.random() * (MAX_HEIGHT - MIN_HEIGHT) + MIN_HEIGHT;
+
+            scale_x = Math.random() * (MAX_SCALE_X - MIN_SCALE_X) + MIN_SCALE_X;
+            scale_y = Math.random() * (MAX_SCALE_Y - MIN_SCALE_Y) + MIN_SCALE_Y;
+            scale_z = Math.random() * (MAX_SCALE_Z - MIN_SCALE_Z) + MIN_SCALE_Z;
+
+            rotation = Math.random() * 2 * Math.PI;
+            
+            model_transform = Mat4.translation(x, height, z)
+                .times(Mat4.rotation(rotation, 0, 1, 0))
+                .times(Mat4.scale(scale_x, scale_y, scale_z));
+            
+            clouds.push(model_transform);
+        }
+
+        return clouds;
     }
 
     make_control_panel() {
@@ -591,11 +688,7 @@ export class FinalProject extends Simulation {
         // }
         // this.ball.draw(context, program_state);
 
-        this.shapes.square.draw(context, program_state,
-            Mat4.rotation(Math.PI / 2, 1, 0, 0)
-            .times(Mat4.translation(0, 0, 3))
-            .times(Mat4.scale(5000, 5000, 0)),
-                this.materials.ground);
+        this.shapes.ground.draw(context, program_state, Mat4.identity(), this.materials.ground);
 
         //super.display(context, program_state);
         if (program_state.animate)
@@ -608,6 +701,11 @@ export class FinalProject extends Simulation {
             let model_transform_melon = b.drawn_location.times(Mat4.rotation(Math.PI / 2, 0,1,0)).times(Mat4.scale(6,3,3));
             this.shapes.sphere.draw(context, program_state, model_transform_melon, this.materials.watermelon);
         }
+
+        for (let cloud_transform of this.clouds) {
+            this.shapes.cloud.draw(context, program_state, cloud_transform, this.materials.cloud);
+        }
+
     }
 }
 
