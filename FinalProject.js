@@ -26,7 +26,7 @@ class Plane_Model extends Shape {
 
 class PhysicsObject {
 
-    static ACC_GRAVITY = 0.2;
+    static ACC_GRAVITY = 0.16;
 
     constructor(shape, mass, material) {
         this.shape = shape;
@@ -167,12 +167,12 @@ class Watermelon extends PhysicsObject {
 
 class Plane extends PhysicsObject {
 
-    static THRUST = 150;
+    static THRUST = 20;
 
-    static DRAG_CONSTANT = 1;
+    static DRAG_CONSTANT = 3;
     static DRAG_CONSTANT_VER = 20;
 
-    static LIFT_POWER = 0.3;
+    static LIFT_POWER = 4;
 
 
 
@@ -494,14 +494,14 @@ export class FinalProject extends Simulation {
         this.key_triggered_button("Thrust", [" "], () => this.plane.thrust = true, undefined, () => this.plane.thrust = false);
         this.key_triggered_button("Air brakes", ["v"], () => this.plane.brake = true, undefined, () => this.plane.brake = false);
         this.new_line();
-        this.key_triggered_button("Pitch Forward", ["s"], () => this.plane.pitch_forward = true, undefined, () => this.plane.pitch_forward = false);
-        this.key_triggered_button("Pitch Backward", ["w"], () => this.plane.pitch_back = true, undefined, () => this.plane.pitch_back = false);
+        this.key_triggered_button("Pitch Forward", ["w"], () => this.plane.pitch_forward = true, undefined, () => this.plane.pitch_forward = false);
+        this.key_triggered_button("Pitch Backward", ["s"], () => this.plane.pitch_back = true, undefined, () => this.plane.pitch_back = false);
         this.new_line();
         this.key_triggered_button("Roll Left", ["a"], () => this.plane.roll_left = true, undefined, () => this.plane.roll_left = false);
         this.key_triggered_button("Roll Right", ["d"], () => this.plane.roll_right = true, undefined, () => this.plane.roll_right = false);
         this.new_line();
-        this.key_triggered_button("Yaw Left", ["y"], () => this.plane.yaw_left = true, undefined, () => this.plane.yaw_left = false);
-        this.key_triggered_button("Yaw Right", ["i"], () => this.plane.yaw_right = true, undefined, () => this.plane.yaw_right = false);
+        this.key_triggered_button("Yaw Left", ["q"], () => this.plane.yaw_left = true, undefined, () => this.plane.yaw_left = false);
+        this.key_triggered_button("Yaw Right", ["e"], () => this.plane.yaw_right = true, undefined, () => this.plane.yaw_right = false);
         this.new_line();
         this.key_triggered_button("Watermelon Whammer", ["b"],
             () => {
@@ -558,16 +558,16 @@ export class FinalProject extends Simulation {
 
         let desired = Mat4.inverse((this.plane.drawn_location || Mat4.identity())
             .times(Mat4.rotation(Math.PI / 6, 1, 0, 0))
-            .times(Mat4.translation(-5, 10, -50))
+            .times(Mat4.translation(-5, 10, -60))
                 //.times(Mat4.translation(40, 10, -15))
             .times(Mat4.rotation(Math.PI, 0, 1, 0))
             );
-        desired = desired.map((x,i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.2));
+        desired = desired.map((x,i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.1));
         program_state.set_camera(desired);
 
 
         program_state.projection_transform = Mat4.perspective(
-            Math.PI / 4, context.width / context.height, 1, 100);
+            Math.PI / 4, context.width / context.height, 1, 1000);
             // *** Lights: *** Values of vector or point lights.
             const light_position = vec4(0, 5, 5, 1);
         program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 1000)];
