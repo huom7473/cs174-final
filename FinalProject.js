@@ -200,7 +200,7 @@ class Watermelon extends PhysicsObject {
 
 class Plane extends PhysicsObject {
 
-    static THRUST = 40;
+    static THRUST = 30;
 
     static DRAG_CONSTANT = 3;
     static DRAG_CONSTANT_VER = 20;
@@ -691,7 +691,7 @@ export class FinalProject extends Simulation {
 
         const MIN_CAT_DIST = 15;
         const MAX_CAT_DIST = 40;
-        if (this.cat.center[2] < this.plane.center[2] - 20) {
+        if (this.cat.center[2] < this.plane.center[2] - 40) {
             console.log("hi");
             let cat_color = [hex_color("#000000"), hex_color("#e8e0b6"), hex_color("#ffa500")][Math.floor(Math.random() * 3)];
             let cat_position = vec3(
