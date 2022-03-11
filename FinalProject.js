@@ -400,12 +400,13 @@ export class FinalProject extends Simulation {
         this.plane = new Plane();
         let cat_color = [hex_color("#000000"), hex_color("#e8e0b6"), hex_color("#ffa500")][Math.floor(Math.random() * 3)];
         this.cat = new Cat(this.shapes.cube, this.materials.plastic.override({color: cat_color}), vec3(-5, 0, 100), this);
-        this.plane.center = vec3(0, 20, 0);
+        this.plane.center = vec3(0, 40, 0);
         this.bodies.push(this.plane);
         this.melon_flag = true;
         this.drop_watermelon = false;
         this.score = 0;
         this.melons = [];
+        this.easy_mode = false;
 
         this.clouds = this.generate_clouds();
     }
@@ -626,6 +627,12 @@ export class FinalProject extends Simulation {
                 setTimeout(() => this.melon_flag = true, 2000);
             },
             undefined);
+        this.new_line(); this.new_line();
+        this.key_triggered_button("Easy Mode", ["m"], () => this.easy_mode = !this.easy_mode, undefined);
+        this.new_line();
+        this.live_string(box => {
+            box.textContent = `Current Difficulty: ${this.easy_mode ? "Easy" : "Normal"}`
+        });
         // super.make_control_panel();
     }
 
@@ -637,7 +644,7 @@ export class FinalProject extends Simulation {
     display(context, program_state) {
         if (this.drop_watermelon){
             this.drop_watermelon = false;
-            let melon = new Watermelon(this.shapes.sphere, this.materials.watermelon, this.plane.center.minus(vec3(5,-2,0)), this.plane.velocity);
+            let melon = new Watermelon(this.shapes.sphere, this.materials.watermelon, this.plane.center, this.plane.velocity);
             this.bodies.push(melon);
             this.melons.push(melon);
             console.log("melon toggled");
@@ -693,15 +700,17 @@ export class FinalProject extends Simulation {
             this.shapes.sphere.draw(context, program_state, model_transform_melon, this.materials.watermelon);
         }
 
-        const MIN_CAT_DIST = 15;
-        const MAX_CAT_DIST = 40;
+        const MIN_CAT_DIST_Z = 120;
+        const MAX_CAT_DIST_Z = 300;
+        let MIN_CAT_DIST_X = this.easy_mode ? 0 : 15;
+        let MAX_CAT_DIST_X = this.easy_mode ? 15 : 40;
         if (this.cat.center[2] < this.plane.center[2] - 40) {
             console.log("hi");
             let cat_color = [hex_color("#000000"), hex_color("#e8e0b6"), hex_color("#ffa500")][Math.floor(Math.random() * 3)];
             let cat_position = vec3(
-                this.plane.center[0] + (Math.random() < 0.5 ? 1 : -1) * (Math.random() * (MAX_CAT_DIST - MIN_CAT_DIST) + MIN_CAT_DIST),
+                this.plane.center[0] + (Math.random() < 0.5 ? 1 : -1) * (Math.random() * (MAX_CAT_DIST_X - MIN_CAT_DIST_X) + MIN_CAT_DIST_X),
                 0,
-                this.plane.center[2] + 8 * (Math.random() * (MAX_CAT_DIST - MIN_CAT_DIST) + MIN_CAT_DIST)
+                this.plane.center[2] + (Math.random() * (MAX_CAT_DIST_Z - MIN_CAT_DIST_Z) + MIN_CAT_DIST_Z)
             )
             this.cat = new Cat(this.shapes.cube, this.materials.plastic.override({color: cat_color}), cat_position, this);
         }
