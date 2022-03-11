@@ -202,7 +202,7 @@ class Watermelon extends PhysicsObject {
 class Plane extends PhysicsObject {
 
     static THRUST_SLOW = 90;
-    static THRUST_FAST = 600;
+    static THRUST_FAST = 120;
     static THRUST = Plane.THRUST_SLOW;
 
     static DRAG_CONSTANT_FAST = 1.2;
@@ -211,7 +211,7 @@ class Plane extends PhysicsObject {
     static DRAG_CONSTANT_VER = 8;
 
     static LIFT_POWER_SLOW = 3;
-    static LIFT_POWER_FAST = 0.3;
+    static LIFT_POWER_FAST = 1;
     static LIFT_POWER = Plane.LIFT_POWER_SLOW;
 
 
@@ -408,7 +408,7 @@ export class FinalProject extends Simulation {
         this.plane = new Plane();
         let cat_color = [hex_color("#000000"), hex_color("#e8e0b6"), hex_color("#ffa500")][Math.floor(Math.random() * 3)];
         this.cat = new Cat(this.shapes.cube, this.materials.plastic.override({color: cat_color}), vec3(-5, 0, 100), this);
-        this.plane.center = vec3(0, 40, 0);
+        this.plane.center = vec3(0, 80, 0);
         this.bodies.push(this.plane);
         this.melon_flag = true;
         this.drop_watermelon = false;
@@ -662,7 +662,7 @@ export class FinalProject extends Simulation {
 
     update_state(dt) {
 
-        if (this.score > 5) {
+        if (this.score >= 5) {
             Plane.THRUST = Plane.THRUST_FAST;
             Plane.LIFT_POWER = Plane.LIFT_POWER_FAST;
             Plane.DRAG_CONSTANT = Plane.DRAG_CONSTANT_FAST;
