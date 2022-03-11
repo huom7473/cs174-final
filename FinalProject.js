@@ -70,7 +70,7 @@ class Plane_Model extends Shape {
 
 class PhysicsObject {
 
-    static ACC_GRAVITY = 0.6;
+    static ACC_GRAVITY = 0.8;
 
     constructor(shape, mass, material) {
         this.shape = shape;
@@ -201,12 +201,18 @@ class Watermelon extends PhysicsObject {
 
 class Plane extends PhysicsObject {
 
-    static THRUST = 90;
+    static THRUST_SLOW = 90;
+    static THRUST_FAST = 600;
+    static THRUST = Plane.THRUST_SLOW;
 
-    static DRAG_CONSTANT = 4;
+    static DRAG_CONSTANT_FAST = 1.2;
+    static DRAG_CONSTANT_SLOW = 4;
+    static DRAG_CONSTANT = Plane.DRAG_CONSTANT_SLOW;
     static DRAG_CONSTANT_VER = 8;
 
-    static LIFT_POWER = 3;
+    static LIFT_POWER_SLOW = 3;
+    static LIFT_POWER_FAST = 0.3;
+    static LIFT_POWER = Plane.LIFT_POWER_SLOW;
 
 
 
@@ -250,7 +256,7 @@ class Plane extends PhysicsObject {
             vec3(0, 0, 0) : hor_vel.normalized();
         norm_vel[1] = 0;
         
-        const drag_const_hor = Plane.DRAG_CONSTANT + (this.brake ? 0.5 : 0);
+        const drag_const_hor = Plane.DRAG_CONSTANT + (this.brake ? 1.5 : 0);
         this.forces.drag_hor = {
             value: norm_vel.times(
                 (vec(this.velocity[0], this.velocity[2]).norm() ** 2) * -drag_const_hor
@@ -512,7 +518,7 @@ export class FinalProject extends Simulation {
         const MAX_SCALE_Y = 8;
         const MIN_SCALE_Z = 4;
         const MAX_SCALE_Z = 8;
-        const NUM_CLOUDS = 800    ;
+        const NUM_CLOUDS = 800;
 
         let clouds = [];
 
@@ -646,7 +652,8 @@ export class FinalProject extends Simulation {
         this.new_line();
 
         this.live_string(box => {
-            box.textContent = `Current Difficulty: ${["Easy", "Medium", "Hard", "Insane"][this.mode]}`
+            box.textContent = `Current Difficulty: ${["Easy", "Medium", "Hard", "Insane"][this.mode]}`;
+            box.style["white-space"] = "pre-wrap";
         });
         this.new_line();
         this.key_triggered_button("Show/Hide Plane", ["p"], () => this.hide_plane = !this.hide_plane, undefined, () => this.plane.yaw_right = false);
@@ -655,6 +662,16 @@ export class FinalProject extends Simulation {
 
     update_state(dt) {
 
+        if (this.score > 5) {
+            Plane.THRUST = Plane.THRUST_FAST;
+            Plane.LIFT_POWER = Plane.LIFT_POWER_FAST;
+            Plane.DRAG_CONSTANT = Plane.DRAG_CONSTANT_FAST;
+        }
+        else {
+            Plane.THRUST = Plane.THRUST_SLOW;
+            Plane.LIFT_POWER = Plane.LIFT_POWER_SLOW;
+            Plane.DRAG_CONSTANT = Plane.DRAG_CONSTANT_SLOW;
+        }
 
     }
 
@@ -722,7 +739,7 @@ export class FinalProject extends Simulation {
         const MIN_CAT_DIST_Z = 120;
         const MAX_CAT_DIST_Z = 300;
         let MIN_CAT_DIST_X = [0, 15, 40, 100][this.mode];
-        let MAX_CAT_DIST_X = [15, 40, 100, 200s][this.mode];
+        let MAX_CAT_DIST_X = [15, 40, 100, 200][this.mode];
         if (this.cat.center[2] < this.plane.center[2] - 40) {
             console.log("hi");
             let cat_color = [hex_color("#000000"), hex_color("#e8e0b6"), hex_color("#ffa500")][Math.floor(Math.random() * 3)];
