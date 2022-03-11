@@ -867,6 +867,7 @@ const Movement_Controls = defs.Movement_Controls =
         }
 
         make_control_panel() {
+            return;
             // make_control_panel(): Sets up a panel of interactive HTML elements, including
             // buttons with key bindings for affecting this scene, and live info readouts.
             this.control_panel.innerHTML += "Click and drag the scene to spin your viewpoint around it.<br>";
