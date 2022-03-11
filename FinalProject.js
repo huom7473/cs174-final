@@ -842,7 +842,7 @@ export class FinalProject extends Simulation {
             Plane.LIFT_POWER = Plane.LIFT_POWER_SLOW;
             Plane.DRAG_CONSTANT = Plane.DRAG_CONSTANT_SLOW;
         }
-        if (this.plane.center[1] < 4)
+        if (this.plane.center[1] < 7)
             this.reset_values();
 
     }
