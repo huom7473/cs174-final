@@ -86,23 +86,6 @@ class PhysicsObject {
         this.rotation = Mat4.identity();
         this.previous = {center: this.center.copy(), rotation: this.rotation.copy()};
 
-        this.materials = {
-            watermelon: new Material(new Textured_Phong(), {
-                color: hex_color("#556B2F"),
-                ambient: 0.5, diffusivity: 0.1, specularity: 0.5,
-                texture: new Texture("assets/watermelon.png")
-            }),
-            arm: new Material(new Textured_Phong(), {
-                color: hex_color("#556B2F"),
-                ambient: 0.5, diffusivity: 0.1, specularity: 0.5,
-                texture: new Texture("assets/arm_bw.png")
-            }),
-            test: new Material(new Phong_Shader(), {
-                ambient: 1, color: hex_color("#006400")
-            }),
-            plastic: new Material(new defs.Phong_Shader(),
-                {ambient: .4, diffusivity: .6, specularity: 0, color: hex_color("#ffffff")}),
-        }
     }
 
     calc_acceleration() {
@@ -160,6 +143,8 @@ class Cat extends PhysicsObject {
         this.center = center;
         this.center[1] = 0;
         this.hit = false;
+        this.materials = project.materials;
+
     }
 
     draw_cat(context, program_state, model_transform, scale) {
@@ -533,6 +518,11 @@ export class FinalProject extends Simulation {
                 ambient: 0.5, diffusivity: 0.1, specularity: 0.5,
                 texture: new Texture("assets/watermelon.png")
             }),
+            arm: new Material(new Textured_Phong(), {
+                color: hex_color("#556B2F"),
+                ambient: 0.5, diffusivity: 0.1, specularity: 0.5,
+                texture: new Texture("assets/arm_bw.png")
+            }),
             test: new Material(new Phong_Shader(), {
                 ambient: 1,
                 color: hex_color("#9d2b2b"),
@@ -575,6 +565,7 @@ export class FinalProject extends Simulation {
         this.bodies.push(this.plane);
         let cat_color = [hex_color("#000000"), hex_color("#e8e0b6"), hex_color("#ffa500")][Math.floor(Math.random() * 3)];
         this.cat = new Cat(this.shapes.cube, cat_color, this.materials.plastic.override({color: cat_color}), vec3(-5, 0, 100), this);
+
         this.plane.center = vec3(0, 80, 0);
         this.melon_flag = true;
         this.score = 0;
@@ -626,50 +617,53 @@ export class FinalProject extends Simulation {
         this.shapes.cone.draw(context, program_state, model_transform_inner_ear, this.materials.plastic.override({color:tom_ear_color}));
     }
 
-    draw_plane(context, program_state, model_transform, draw_melon) {
+    draw_plane(context, program_state, model_transform, draw_melon, hide) {
         let plane_color = hex_color("#8b0000");
         model_transform = model_transform.times(Mat4.rotation(Math.PI/2, 0,1,0));
         let original = model_transform;
-        this.draw_tom(context, program_state, model_transform.times(Mat4.translation(0,15,-5)));
+        if(!hide)
+            this.draw_tom(context, program_state, model_transform.times(Mat4.translation(0,15,-5)));
         let upper = model_transform;
         let lower = model_transform;
         let watermelon = model_transform;
         model_transform = model_transform.times(Mat4.scale(2,2,1));
 
-
-        for(let i = 0; i < 4; i++){
-            this.shapes.wheel.draw(context, program_state, model_transform, this.materials.plastic.override({color: plane_color}));
-            model_transform = model_transform.times(Mat4.scale(0.25,2,0.5));
-            model_transform = model_transform.times(Mat4.translation(0,1,0));
-            this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color: plane_color}));
-            model_transform = model_transform.times(Mat4.scale(4,0.5,2));
-            if (i == 0){
-                model_transform = model_transform.times(Mat4.translation(5,-2,0));
-            } else if (i == 1){
-                model_transform = model_transform.times(Mat4.translation(0,-2,-10));
-            } else if (i == 2) {
-                model_transform = model_transform.times(Mat4.translation(-5, -2, 0));
+        if(!hide){
+            for(let i = 0; i < 4; i++){
+                this.shapes.wheel.draw(context, program_state, model_transform, this.materials.plastic.override({color: plane_color}));
+                model_transform = model_transform.times(Mat4.scale(0.25,2,0.5));
+                model_transform = model_transform.times(Mat4.translation(0,1,0));
+                this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color: plane_color}));
+                model_transform = model_transform.times(Mat4.scale(4,0.5,2));
+                if (i == 0){
+                    model_transform = model_transform.times(Mat4.translation(5,-2,0));
+                } else if (i == 1){
+                    model_transform = model_transform.times(Mat4.translation(0,-2,-10));
+                } else if (i == 2) {
+                    model_transform = model_transform.times(Mat4.translation(-5, -2, 0));
+                }
             }
-        }
 
-        //Upper and lower floors
-        upper = upper.times(Mat4.translation(5,8,-5));
-        upper = upper.times(Mat4.scale(7, 0.2, 6));
-        this.shapes.cube.draw(context, program_state, upper, this.materials.plastic.override({color: plane_color}));
-        let upper_right = original
-            .times(Mat4.translation(5,9.5,-14.5))
-            .times(Mat4.rotation(Math.PI/8, 1, 0, 0))
-            .times(Mat4.scale(7, 0.2, 4));
-        //.times(Mat4.rotation(Math.PI/8, 1, 0, 0));
-        this.shapes.cube.draw(context, program_state, upper_right, this.materials.plastic.override({color: plane_color}));
-        let upper_left = original
-            .times(Mat4.translation(5,9.5,4.7))
-            .times(Mat4.rotation(-Math.PI/8, 1, 0, 0))
-            .times(Mat4.scale(7, 0.2, 4));
-        this.shapes.cube.draw(context, program_state, upper_left, this.materials.plastic.override({color: plane_color}));
-        lower = lower.times(Mat4.translation(5,1,-5));
-        lower = lower.times(Mat4.scale(6, 0.2, 4.5));
-        this.shapes.cube.draw(context, program_state, lower, this.materials.plastic.override({color: plane_color}));
+            //Upper and lower floors
+            upper = upper.times(Mat4.translation(5,8,-5));
+            upper = upper.times(Mat4.scale(7, 0.2, 6));
+            this.shapes.cube.draw(context, program_state, upper, this.materials.plastic.override({color: plane_color}));
+            let upper_right = original
+                .times(Mat4.translation(5,9.5,-14.5))
+                .times(Mat4.rotation(Math.PI/8, 1, 0, 0))
+                .times(Mat4.scale(7, 0.2, 4));
+            //.times(Mat4.rotation(Math.PI/8, 1, 0, 0));
+            this.shapes.cube.draw(context, program_state, upper_right, this.materials.plastic.override({color: plane_color}));
+            let upper_left = original
+                .times(Mat4.translation(5,9.5,4.7))
+                .times(Mat4.rotation(-Math.PI/8, 1, 0, 0))
+                .times(Mat4.scale(7, 0.2, 4));
+            this.shapes.cube.draw(context, program_state, upper_left, this.materials.plastic.override({color: plane_color}));
+            lower = lower.times(Mat4.translation(5,1,-5));
+            lower = lower.times(Mat4.scale(6, 0.2, 4.5));
+            this.shapes.cube.draw(context, program_state, lower, this.materials.plastic.override({color: plane_color}));
+
+        }
 
         //Watermelon
         watermelon = watermelon.times(Mat4.translation(5,4,-5));
@@ -848,7 +842,7 @@ export class FinalProject extends Simulation {
             Plane.LIFT_POWER = Plane.LIFT_POWER_SLOW;
             Plane.DRAG_CONSTANT = Plane.DRAG_CONSTANT_SLOW;
         }
-        if (this.plane.center[1] < 5)
+        if (this.plane.center[1] < 4)
             this.reset_values();
 
     }
@@ -894,8 +888,9 @@ export class FinalProject extends Simulation {
         //this.shapes.axes.draw(context, program_state, this.plane.drawn_location.times(Mat4.scale(6, 6, 6)), this.materials.test);
         let transform_plane = this.plane.drawn_location
             .times(Mat4.translation(5, -5, 5));
-        if (!this.hide_plane)
-            this.draw_plane(context, program_state, transform_plane, this.melon_flag);
+
+        this.draw_plane(context, program_state, transform_plane, this.melon_flag, this.hide_plane);
+
         this.cat.display(context, program_state);
 
         for (let melon of this.melons) {
@@ -927,6 +922,7 @@ export class FinalProject extends Simulation {
         }
 
         this.melons = this.melons.filter(melon => !melon.collided);
+        this.bodies = this.bodies.filter(melon => !melon.collided);
 
         for (let cloud_transform of this.clouds) {
             this.shapes.cloud.draw(context, program_state, cloud_transform, this.materials.cloud);
