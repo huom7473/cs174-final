@@ -165,9 +165,10 @@ class Cat extends PhysicsObject {
 
 class Watermelon extends PhysicsObject {
 
-    constructor(shape, material, center, velocity) {
+    constructor(shape, material, center, rotation, velocity) {
         super(shape, 50, material);
         this.center = center;
+        this.rotation = rotation;
         this.inverse = this.drawn_location;
         this.velocity = vec3(velocity[0],0,velocity[2]); // velocity.plus(vec3(0,0,1));
         this.width = 3;
@@ -376,7 +377,7 @@ export class FinalProject extends Simulation {
                 color: hex_color("#9d2b2b"),
             }),
             plastic: new Material(new defs.Phong_Shader(),
-                {ambient: .4, diffusivity: .6, specularity: 0, color: hex_color("#ffffff")}),
+                {ambient: 0.3, diffusivity: 0.9, specularity: 0.1, color: hex_color("#ffffff")}),
             collided: new Material(new defs.Phong_Shader(),
                 {ambient: .4, diffusivity: .6, specularity: 0, color: hex_color("#ff0000")}),
             ground: new Material(new defs.Textured_Phong(), {
@@ -385,7 +386,8 @@ export class FinalProject extends Simulation {
                 texture: new Texture("assets/grass2.png")
             }),
             cloud: new Material(new defs.Phong_Shader(), {
-                ambient: 1,
+                ambient: 0.6,
+                diffusivity: 0.6,
                 color: color(1, 1, 1, 0.1),
             })
         }
@@ -412,7 +414,7 @@ export class FinalProject extends Simulation {
     }
 
     draw_tom(context, program_state, model_transform) {
-        let tom_color = hex_color("#242b53");
+        let tom_color = hex_color("#4a5282");
         let tom_ear_color = hex_color("#763956");
 
         let model_transform_original = model_transform;
@@ -578,6 +580,18 @@ export class FinalProject extends Simulation {
             box.textContent = dir;
             box.style["white-space"] = "pre-wrap";
         });
+
+        //Altitude
+        this.live_string(box => {
+            let altitude = this.plane.center[1];
+            let meter = Math.floor(altitude / 400 * 20);
+            meter = Math.min(meter, 20);
+            meter = Math.max(meter, 0);
+
+            box.textContent = `${" ".repeat(5)} [${" ".repeat(meter)}0${" ".repeat(19 - meter)}]`;
+            box.style["white-space"] = "pre-wrap";
+        });
+
         this.new_line();
         this.live_string(box => {
             const head_point = this.plane.rotation.times(vec4(0, 0, 1, 0)).to3();
@@ -644,7 +658,7 @@ export class FinalProject extends Simulation {
     display(context, program_state) {
         if (this.drop_watermelon){
             this.drop_watermelon = false;
-            let melon = new Watermelon(this.shapes.sphere, this.materials.watermelon, this.plane.center, this.plane.velocity);
+            let melon = new Watermelon(this.shapes.sphere, this.materials.watermelon, this.plane.center, this.plane.rotation, this.plane.velocity);
             this.bodies.push(melon);
             this.melons.push(melon);
             console.log("melon toggled");
@@ -671,14 +685,15 @@ export class FinalProject extends Simulation {
         program_state.projection_transform = Mat4.perspective(
             Math.PI / 4, context.width / context.height, 1, 1000);
             // *** Lights: *** Values of vector or point lights.
-            const light_position = vec4(0, 5, 5, 1);
-        program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 1000)];
+        const light_position = vec4(0.5, 1, 0, 0).normalized();
+        program_state.lights = [new Light(light_position, hex_color("ffe499"), 10000)];
 
         this.shapes.ground.draw(context, program_state, Mat4.identity(), this.materials.ground);
 
         //super.display(context, program_state);
         if (program_state.animate)
             this.simulate(program_state.animation_delta_time);
+
         this.shapes.axes.draw(context, program_state, this.plane.drawn_location.times(Mat4.scale(6, 6, 6)), this.materials.test);
         let transform_plane = this.plane.drawn_location
             .times(Mat4.translation(5, -5, 5));
