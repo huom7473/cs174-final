@@ -405,18 +405,24 @@ export class FinalProject extends Simulation {
         //     value: vec3(0, -1 * 0.1 * this.ball.mass, 0),
         //     loc: vec3(0, 0, .2)
         // };
-        this.plane = new Plane();
-        let cat_color = [hex_color("#000000"), hex_color("#e8e0b6"), hex_color("#ffa500")][Math.floor(Math.random() * 3)];
-        this.cat = new Cat(this.shapes.cube, this.materials.plastic.override({color: cat_color}), vec3(-5, 0, 100), this);
-        this.plane.center = vec3(0, 80, 0);
-        this.bodies.push(this.plane);
-        this.melon_flag = true;
+
+        this.reset_values();
         this.drop_watermelon = false;
-        this.score = 0;
         this.melons = [];
         this.mode = 1;
 
         this.clouds = this.generate_clouds();
+    }
+
+    reset_values () {
+        this.plane = new Plane();
+        this.bodies.pop();
+        this.bodies.push(this.plane);
+        let cat_color = [hex_color("#000000"), hex_color("#e8e0b6"), hex_color("#ffa500")][Math.floor(Math.random() * 3)];
+        this.cat = new Cat(this.shapes.cube, this.materials.plastic.override({color: cat_color}), vec3(-5, 0, 100), this);
+        this.plane.center = vec3(0, 80, 0);
+        this.melon_flag = true;
+        this.score = 0;
     }
 
     draw_tom(context, program_state, model_transform) {
@@ -652,7 +658,7 @@ export class FinalProject extends Simulation {
         this.new_line();
 
         this.live_string(box => {
-            box.textContent = `Current Difficulty: ${["Easy", "Medium", "Hard", "Insane"][this.mode]}`;
+            box.textContent = `Current Difficulty: ${["Easy", "Normal", "Hard", "Insane"][this.mode]}`;
             box.style["white-space"] = "pre-wrap";
         });
         this.new_line();
@@ -672,6 +678,8 @@ export class FinalProject extends Simulation {
             Plane.LIFT_POWER = Plane.LIFT_POWER_SLOW;
             Plane.DRAG_CONSTANT = Plane.DRAG_CONSTANT_SLOW;
         }
+        if (this.plane.center[1] < 5)
+            this.reset_values();
 
     }
 
@@ -681,7 +689,6 @@ export class FinalProject extends Simulation {
             let melon = new Watermelon(this.shapes.sphere, this.materials.watermelon, this.plane.center, this.plane.rotation, this.plane.velocity);
             this.bodies.push(melon);
             this.melons.push(melon);
-            console.log("melon toggled");
         }
 
         context.context.clearColor.apply(context.context, hex_color("#4fa8b8")); // background
@@ -728,7 +735,6 @@ export class FinalProject extends Simulation {
                     this.cat.collide(context, program_state);
                     melon.collide();
                     this.score += 1;
-                    console.log(this.score);
                     continue;
                 }
             }
@@ -741,7 +747,6 @@ export class FinalProject extends Simulation {
         let MIN_CAT_DIST_X = [0, 15, 40, 100][this.mode];
         let MAX_CAT_DIST_X = [15, 40, 100, 200][this.mode];
         if (this.cat.center[2] < this.plane.center[2] - 40) {
-            console.log("hi");
             let cat_color = [hex_color("#000000"), hex_color("#e8e0b6"), hex_color("#ffa500")][Math.floor(Math.random() * 3)];
             let cat_position = vec3(
                 this.plane.center[0] + (Math.random() < 0.5 ? 1 : -1) * (Math.random() * (MAX_CAT_DIST_X - MIN_CAT_DIST_X) + MIN_CAT_DIST_X),
