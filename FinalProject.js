@@ -86,7 +86,23 @@ class PhysicsObject {
         this.rotation = Mat4.identity();
         this.previous = {center: this.center.copy(), rotation: this.rotation.copy()};
 
-        
+        this.materials = {
+            watermelon: new Material(new Textured_Phong(), {
+                color: hex_color("#556B2F"),
+                ambient: 0.5, diffusivity: 0.1, specularity: 0.5,
+                texture: new Texture("assets/watermelon.png")
+            }),
+            arm: new Material(new Textured_Phong(), {
+                color: hex_color("#556B2F"),
+                ambient: 0.5, diffusivity: 0.1, specularity: 0.5,
+                texture: new Texture("assets/arm_bw.png")
+            }),
+            test: new Material(new Phong_Shader(), {
+                ambient: 1, color: hex_color("#006400")
+            }),
+            plastic: new Material(new defs.Phong_Shader(),
+                {ambient: .4, diffusivity: .6, specularity: 0, color: hex_color("#ffffff")}),
+        }
     }
 
     calc_acceleration() {
@@ -137,14 +153,149 @@ class PhysicsObject {
 }
 
 class Cat extends PhysicsObject {
-    constructor(shape, material, center, project) {
+    constructor(shape, color, material, center, project) {
         super(shape, 50, material);
+        this.color = color;
         this.shapes = project.shapes;
         this.center = center;
         this.center[1] = 0;
         this.hit = false;
     }
 
+    draw_cat(context, program_state, model_transform, scale) {
+        //model_transform = model_transform.times(Mat4.scale(3,1,1));
+        let black = hex_color("#000000");
+        let tom_ear_color = hex_color("#763956");
+        let belly = hex_color("#FFFFFF");
+        model_transform = model_transform.times(Mat4.translation(0, Math.min(0,-(scale-1)*3), 0));
+        let model_transform_original = model_transform;
+
+        let model_transform_face = model_transform.times(Mat4.scale(scale, 1, 1));
+        model_transform = model_transform.times(Mat4.scale(Math.min(1, 1/scale), Math.min(1, 1/scale), Math.min(1, 1/scale)));
+        //left eye
+        let model_transform_left_eye = model_transform_face
+            .times(Mat4.translation(-2.4,0.7,0.8))
+            .times(Mat4.scale(0.5, 1, 0.5));
+        this.shapes.sphere.draw(context, program_state, model_transform_left_eye, this.materials.plastic.override({color: belly}));
+        model_transform_left_eye = model_transform_left_eye
+            .times(Mat4.translation(-0.6, -0.15, 0.1))
+            .times(Mat4.scale(0.7, 0.3, 0.7));
+        this.shapes.sphere.draw(context, program_state, model_transform_left_eye, this.materials.plastic.override({color: black}));
+
+        //right eye
+        let model_transform_right_eye = model_transform_face
+            .times(Mat4.translation(-2.4,0.7,-0.8))
+            .times(Mat4.scale(0.5, 1, 0.5));
+        this.shapes.sphere.draw(context, program_state, model_transform_right_eye, this.materials.plastic.override({color: belly}));
+        model_transform_right_eye = model_transform_right_eye
+            .times(Mat4.translation(-0.65, -0.17, -0.1))
+            .times(Mat4.scale(0.7, 0.3, 0.7));
+        this.shapes.sphere.draw(context, program_state, model_transform_right_eye, this.materials.plastic.override({color: black}));
+
+        //mouth + nose
+        let model_transform_mouth = model_transform_face
+            .times(Mat4.translation(-2.3,-0.4,0))
+        this.shapes.sphere.draw(context, program_state, model_transform_mouth, this.materials.plastic.override({color: belly}));
+        model_transform_mouth = model_transform_face
+            .times(Mat4.translation(-3,0.1,0))
+            .times(Mat4.scale(0.4, 0.4, 0.4));
+        this.shapes.sphere.draw(context, program_state, model_transform_mouth, this.materials.plastic.override({color: black}));
+
+        //whiskers
+        let model_transform_top_left_whisker = model_transform_face
+            .times(Mat4.translation(-3.5, 0, 1.2))
+            .times(Mat4.rotation(0.9 * Math.PI, 1, 0, 0))
+            .times(Mat4.scale(0.03,0.03,1));
+        this.shapes.cube.draw(context, program_state, model_transform_top_left_whisker, this.materials.plastic.override({color: black}));
+
+        let model_transform_bot_left_whisker = model_transform_face
+            .times(Mat4.translation(-3.5, -1, 1.2))
+            .times(Mat4.rotation(1.1 * Math.PI, 1, 0, 0))
+            .times(Mat4.scale(0.03,0.03,1));
+        this.shapes.cube.draw(context, program_state, model_transform_bot_left_whisker, this.materials.plastic.override({color: black}));
+
+        let model_transform_top_right_whisker = model_transform_face
+            .times(Mat4.translation(-3.5, 0, -1.2))
+            .times(Mat4.rotation(-0.9 * Math.PI, 1, 0, 0))
+            .times(Mat4.scale(0.03,0.03,1));
+        this.shapes.cube.draw(context, program_state, model_transform_top_right_whisker, this.materials.plastic.override({color: black}));
+
+        let model_transform_bot_right_whisker = model_transform_face
+            .times(Mat4.translation(-3.5, -1, -1.2))
+            .times(Mat4.rotation(-1.1 * Math.PI, 1, 0, 0))
+            .times(Mat4.scale(0.03,0.03,1));
+        this.shapes.cube.draw(context, program_state, model_transform_bot_right_whisker, this.materials.plastic.override({color: black}));
+
+        //head
+        let model_transform_head = model_transform_face.times(Mat4.scale(3, 3, 3));
+        this.shapes.sphere.draw(context, program_state, model_transform_head, this.material);
+
+        model_transform = model_transform.times(Mat4.scale(3, 3, 3));
+        //body
+        model_transform = model_transform.times(Mat4.translation(0, -2, 0)).times(Mat4.scale(1, 1.4, 1));
+        this.shapes.sphere.draw(context, program_state, model_transform, this.material);
+        //belly
+        model_transform = model_transform.times(Mat4.translation(-0.55, 0, 0)).times(Mat4.scale(0.55, 0.7, 0.55));
+        this.shapes.sphere.draw(context, program_state, model_transform, this.materials.plastic.override({color: belly}));
+
+        //arms
+        let model_transform_left_arm = model_transform_original
+            .times(Mat4.translation(0, -5, 2.8))
+            .times(Mat4.rotation(-Math.PI/8, 1, 0, 0))
+            .times(Mat4.scale(0.7, 2.5, 0.7));
+        this.shapes.sphere.draw(context, program_state, model_transform_left_arm, this.materials.arm.override({color: this.color}));
+
+        let model_transform_right_arm = model_transform_original
+            .times(Mat4.translation(0, -5, -3))
+            .times(Mat4.rotation(Math.PI/8, 1, 0, 0))
+            .times(Mat4.scale(0.7, 2.5, 0.7));
+        this.shapes.sphere.draw(context, program_state, model_transform_right_arm, this.materials.arm.override({color: this.color}));
+
+        let model_transform_left_leg = model_transform_original
+            .times(Mat4.translation(0, -10, 1))
+            .times(Mat4.scale(0.7, 1.5, 0.7));
+        this.shapes.sphere.draw(context, program_state, model_transform_left_leg, this.materials.arm.override({color: this.color}));
+
+        let model_transform_right_leg = model_transform_original
+            .times(Mat4.translation(0, -10, -1))
+            .times(Mat4.scale(0.7, 1.5, 0.7));
+        this.shapes.sphere.draw(context, program_state, model_transform_right_leg, this.materials.arm.override({color: this.color}));
+
+
+        //outer ear
+        let model_transform_ear = model_transform_original
+            .times(Mat4.rotation(Math.PI / 2, 0, 1, 0))
+            .times(Mat4.rotation(Math.PI / 6, 0, 0, 1))
+            .times(Mat4.translation(0, 3.5, 0))
+            .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
+            .times(Mat4.scale(1, 0.1, 1));
+        this.shapes.cone.draw(context, program_state, model_transform_ear, this.materials.plastic.override({color:this.color}));
+        model_transform_ear = model_transform_original
+            .times(Mat4.rotation(Math.PI / 2, 0, 1, 0))
+            .times(Mat4.rotation(-Math.PI / 6, 0, 0, 1))
+            .times(Mat4.translation(0, 3.5, 0))
+            .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
+            .times(Mat4.scale(1, 0.1, 1));
+        this.shapes.cone.draw(context, program_state, model_transform_ear, this.materials.plastic.override({color:this.color}));
+
+        //inner ear
+        let model_transform_inner_ear = model_transform_original
+            .times(Mat4.translation(-0.1, 0, 0))
+            .times(Mat4.rotation(Math.PI / 2, 0, 1, 0))
+            .times(Mat4.rotation(Math.PI / 6, 0, 0, 1))
+            .times(Mat4.translation(0, 3.5, 0))
+            .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
+            .times(Mat4.scale(0.5, 0.1, 0.5));
+        this.shapes.cone.draw(context, program_state, model_transform_inner_ear, this.materials.plastic.override({color:tom_ear_color}));
+        model_transform_inner_ear = model_transform_original
+            .times(Mat4.translation(-0.1, 0, 0))
+            .times(Mat4.rotation(Math.PI / 2, 0, 1, 0))
+            .times(Mat4.rotation(-Math.PI / 6, 0, 0, 1))
+            .times(Mat4.translation(0, 3.5, 0))
+            .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
+            .times(Mat4.scale(0.5, 0.1, 0.5));
+        this.shapes.cone.draw(context, program_state, model_transform_inner_ear, this.materials.plastic.override({color:tom_ear_color}));
+    }
     collide(context, program_state) {
         this.hit = true;
         this.hit_time = program_state.animation_time;
@@ -155,11 +306,15 @@ class Cat extends PhysicsObject {
     }
     display(context, program_state) {
         if (this.hit) {
-            let scaling_factor = Math.min((program_state.animation_time - this.hit_time) / 100, 5);
-            this.shapes.cube.draw(context, program_state, Mat4.translation(...this.center).times(Mat4.scale(4, 8, 4 + scaling_factor)).times(Mat4.translation(0, 1, 0)), this.material);
+            let scaling_factor = Math.min((program_state.animation_time - this.hit_time) / 150, 3);
+            this.draw_cat(context, program_state, Mat4.translation(...this.center.plus(vec3(0,13,0))).times(Mat4.scale(1.15, 1.15, 1.15)).times(Mat4.rotation(-Math.PI/2, 0, 1, 0)), scaling_factor);
+
+            //this.shapes.cube.draw(context, program_state, Mat4.translation(...this.center).times(Mat4.scale(4, 8, 4 + scaling_factor)).times(Mat4.translation(0, 1, 0)), this.material);
         }
         else
-            this.shapes.cube.draw(context, program_state, Mat4.translation(...this.center).times(Mat4.scale(4, 8, 4)).times(Mat4.translation(0, 1, 0)), this.material);
+            this.draw_cat(context, program_state, Mat4.translation(...this.center.plus(vec3(0,13,0))).times(Mat4.scale(1.15, 1.15, 1.15)).times(Mat4.rotation(-Math.PI/2, 0, 1, 0)), 1);
+
+            //this.shapes.cube.draw(context, program_state, Mat4.translation(...this.center).times(Mat4.scale(4, 8, 4)).times(Mat4.translation(0, 1, 0)), this.material);
     }
 }
 
@@ -419,10 +574,11 @@ export class FinalProject extends Simulation {
         this.bodies.pop();
         this.bodies.push(this.plane);
         let cat_color = [hex_color("#000000"), hex_color("#e8e0b6"), hex_color("#ffa500")][Math.floor(Math.random() * 3)];
-        this.cat = new Cat(this.shapes.cube, this.materials.plastic.override({color: cat_color}), vec3(-5, 0, 100), this);
+        this.cat = new Cat(this.shapes.cube, cat_color, this.materials.plastic.override({color: cat_color}), vec3(-5, 0, 100), this);
         this.plane.center = vec3(0, 80, 0);
         this.melon_flag = true;
         this.score = 0;
+        this.melons = [];
     }
 
     draw_tom(context, program_state, model_transform) {
@@ -473,6 +629,7 @@ export class FinalProject extends Simulation {
     draw_plane(context, program_state, model_transform, draw_melon) {
         let plane_color = hex_color("#8b0000");
         model_transform = model_transform.times(Mat4.rotation(Math.PI/2, 0,1,0));
+        let original = model_transform;
         this.draw_tom(context, program_state, model_transform.times(Mat4.translation(0,15,-5)));
         let upper = model_transform;
         let lower = model_transform;
@@ -497,8 +654,19 @@ export class FinalProject extends Simulation {
 
         //Upper and lower floors
         upper = upper.times(Mat4.translation(5,8,-5));
-        upper = upper.times(Mat4.scale(7, 0.2, 14));
+        upper = upper.times(Mat4.scale(7, 0.2, 6));
         this.shapes.cube.draw(context, program_state, upper, this.materials.plastic.override({color: plane_color}));
+        let upper_right = original
+            .times(Mat4.translation(5,9.5,-14.5))
+            .times(Mat4.rotation(Math.PI/8, 1, 0, 0))
+            .times(Mat4.scale(7, 0.2, 4));
+        //.times(Mat4.rotation(Math.PI/8, 1, 0, 0));
+        this.shapes.cube.draw(context, program_state, upper_right, this.materials.plastic.override({color: plane_color}));
+        let upper_left = original
+            .times(Mat4.translation(5,9.5,4.7))
+            .times(Mat4.rotation(-Math.PI/8, 1, 0, 0))
+            .times(Mat4.scale(7, 0.2, 4));
+        this.shapes.cube.draw(context, program_state, upper_left, this.materials.plastic.override({color: plane_color}));
         lower = lower.times(Mat4.translation(5,1,-5));
         lower = lower.times(Mat4.scale(6, 0.2, 4.5));
         this.shapes.cube.draw(context, program_state, lower, this.materials.plastic.override({color: plane_color}));
@@ -512,6 +680,8 @@ export class FinalProject extends Simulation {
         }
         return model_transform;
     }
+
+
 
     generate_clouds() {
         const MIN_HEIGHT = 20;
@@ -753,7 +923,7 @@ export class FinalProject extends Simulation {
                 0,
                 this.plane.center[2] + (Math.random() * (MAX_CAT_DIST_Z - MIN_CAT_DIST_Z) + MIN_CAT_DIST_Z)
             )
-            this.cat = new Cat(this.shapes.cube, this.materials.plastic.override({color: cat_color}), cat_position, this);
+            this.cat = new Cat(this.shapes.cube, cat_color, this.materials.plastic.override({color: cat_color}), cat_position, this);
         }
 
         this.melons = this.melons.filter(melon => !melon.collided);
