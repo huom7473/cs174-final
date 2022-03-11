@@ -408,7 +408,7 @@ export class FinalProject extends Simulation {
         this.drop_watermelon = false;
         this.score = 0;
         this.melons = [];
-        this.easy_mode = false;
+        this.mode = 1;
 
         this.clouds = this.generate_clouds();
     }
@@ -504,15 +504,15 @@ export class FinalProject extends Simulation {
     generate_clouds() {
         const MIN_HEIGHT = 20;
         const MAX_HEIGHT = 180;
-        const MIN_POS = -3000;
-        const MAX_POS = 3000;
+        const MIN_POS = -5000;
+        const MAX_POS = 5000;
         const MIN_SCALE_X = 7;
         const MAX_SCALE_X = 12;
         const MIN_SCALE_Y = 4;
         const MAX_SCALE_Y = 8;
         const MIN_SCALE_Z = 4;
         const MAX_SCALE_Z = 8;
-        const NUM_CLOUDS = 600;
+        const NUM_CLOUDS = 800    ;
 
         let clouds = [];
 
@@ -633,7 +633,7 @@ export class FinalProject extends Simulation {
         this.key_triggered_button("Yaw Left", ["q"], () => this.plane.yaw_left = true, undefined, () => this.plane.yaw_left = false);
         this.key_triggered_button("Yaw Right", ["e"], () => this.plane.yaw_right = true, undefined, () => this.plane.yaw_right = false);
         this.new_line();
-        this.key_triggered_button("Watermelon Whammer", ["b"],
+        this.key_triggered_button("Watermelon", ["b"],
             () => {
                 if (!this.melon_flag) return;
                 this.drop_watermelon = true;
@@ -642,11 +642,14 @@ export class FinalProject extends Simulation {
             },
             undefined);
         this.new_line(); this.new_line();
-        this.key_triggered_button("Easy Mode", ["m"], () => this.easy_mode = !this.easy_mode, undefined);
+        this.key_triggered_button("Change Difficulty", ["m"], () => this.mode = this.mode + 1 >= 4 ? 0 : this.mode + 1, undefined);
         this.new_line();
+
         this.live_string(box => {
-            box.textContent = `Current Difficulty: ${this.easy_mode ? "Easy" : "Normal"}`
+            box.textContent = `Current Difficulty: ${["Easy", "Medium", "Hard", "Insane"][this.mode]}`
         });
+        this.new_line();
+        this.key_triggered_button("Show/Hide Plane", ["p"], () => this.hide_plane = !this.hide_plane, undefined, () => this.plane.yaw_right = false);
         // super.make_control_panel();
     }
 
@@ -694,10 +697,11 @@ export class FinalProject extends Simulation {
         if (program_state.animate)
             this.simulate(program_state.animation_delta_time);
 
-        this.shapes.axes.draw(context, program_state, this.plane.drawn_location.times(Mat4.scale(6, 6, 6)), this.materials.test);
+        //this.shapes.axes.draw(context, program_state, this.plane.drawn_location.times(Mat4.scale(6, 6, 6)), this.materials.test);
         let transform_plane = this.plane.drawn_location
             .times(Mat4.translation(5, -5, 5));
-        this.draw_plane(context, program_state, transform_plane, this.melon_flag);
+        if (!this.hide_plane)
+            this.draw_plane(context, program_state, transform_plane, this.melon_flag);
         this.cat.display(context, program_state);
 
         for (let melon of this.melons) {
@@ -717,8 +721,8 @@ export class FinalProject extends Simulation {
 
         const MIN_CAT_DIST_Z = 120;
         const MAX_CAT_DIST_Z = 300;
-        let MIN_CAT_DIST_X = this.easy_mode ? 0 : 15;
-        let MAX_CAT_DIST_X = this.easy_mode ? 15 : 40;
+        let MIN_CAT_DIST_X = [0, 15, 40, 100][this.mode];
+        let MAX_CAT_DIST_X = [15, 40, 100, 200s][this.mode];
         if (this.cat.center[2] < this.plane.center[2] - 40) {
             console.log("hi");
             let cat_color = [hex_color("#000000"), hex_color("#e8e0b6"), hex_color("#ffa500")][Math.floor(Math.random() * 3)];
