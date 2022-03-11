@@ -70,7 +70,7 @@ class Plane_Model extends Shape {
 
 class PhysicsObject {
 
-    static ACC_GRAVITY = 0.6;
+    static ACC_GRAVITY = 0.8;
 
     constructor(shape, mass, material) {
         this.shape = shape;
@@ -201,12 +201,18 @@ class Watermelon extends PhysicsObject {
 
 class Plane extends PhysicsObject {
 
-    static THRUST = 90;
+    static THRUST_SLOW = 90;
+    static THRUST_FAST = 600;
+    static THRUST = Plane.THRUST_SLOW;
 
-    static DRAG_CONSTANT = 4;
+    static DRAG_CONSTANT_FAST = 1.2;
+    static DRAG_CONSTANT_SLOW = 4;
+    static DRAG_CONSTANT = Plane.DRAG_CONSTANT_SLOW;
     static DRAG_CONSTANT_VER = 8;
 
-    static LIFT_POWER = 3;
+    static LIFT_POWER_SLOW = 3;
+    static LIFT_POWER_FAST = 0.3;
+    static LIFT_POWER = Plane.LIFT_POWER_SLOW;
 
 
 
@@ -250,7 +256,7 @@ class Plane extends PhysicsObject {
             vec3(0, 0, 0) : hor_vel.normalized();
         norm_vel[1] = 0;
         
-        const drag_const_hor = Plane.DRAG_CONSTANT + (this.brake ? 0.5 : 0);
+        const drag_const_hor = Plane.DRAG_CONSTANT + (this.brake ? 1.5 : 0);
         this.forces.drag_hor = {
             value: norm_vel.times(
                 (vec(this.velocity[0], this.velocity[2]).norm() ** 2) * -drag_const_hor
@@ -409,6 +415,7 @@ export class FinalProject extends Simulation {
         this.score = 0;
         this.melons = [];
         this.easy_mode = false;
+        this.fast_mode = false;
 
         this.clouds = this.generate_clouds();
     }
@@ -643,15 +650,34 @@ export class FinalProject extends Simulation {
             undefined);
         this.new_line(); this.new_line();
         this.key_triggered_button("Easy Mode", ["m"], () => this.easy_mode = !this.easy_mode, undefined);
-        this.new_line();
         this.live_string(box => {
-            box.textContent = `Current Difficulty: ${this.easy_mode ? "Easy" : "Normal"}`
+            box.textContent = `  Current Difficulty: ${this.easy_mode ? "Easy" : "Normal"}`
+            box.style["white-space"] = "pre-wrap";
         });
-        // super.make_control_panel();
+        this.new_line();
+        this.key_triggered_button("Fast Mode", ["n"], () => {
+            this.fast_mode = !this.fast_mode;
+        });
+        this.live_string(box => {
+            box.textContent = `  Current Speed: ${this.fast_mode ? "Fast" : "Slow"}`
+            box.style["white-space"] = "pre-wrap";
+        });
+        this.new_line();
+        super.make_control_panel();
     }
 
     update_state(dt) {
 
+        if (this.fast_mode) {
+            Plane.THRUST = Plane.THRUST_FAST;
+            Plane.LIFT_POWER = Plane.LIFT_POWER_FAST;
+            Plane.DRAG_CONSTANT = Plane.DRAG_CONSTANT_FAST;
+        } 
+        else {
+            Plane.THRUST = Plane.THRUST_SLOW;
+            Plane.LIFT_POWER = Plane.LIFT_POWER_SLOW;
+            Plane.DRAG_CONSTANT = Plane.DRAG_CONSTANT_SLOW;
+        }
 
     }
 
