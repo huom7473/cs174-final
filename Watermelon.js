@@ -15,7 +15,6 @@ export class Watermelon extends PhysicsObject {
         super(shape, 50, material);
         this.center = center;
         this.rotation = rotation;
-        this.inverse = this.drawn_location;
         this.velocity = vec3(velocity[0], 0, velocity[2]); // velocity.plus(vec3(0,0,1));
         this.width = 3;
         this.collided = false;
@@ -32,15 +31,17 @@ export class Watermelon extends PhysicsObject {
         this.collided = true;
     }
 
-    check_colliding(cat) {
-        //console.log("checking");
-
-        const T = this.inverse.times(cat.getLocation(), this.temp_matrix);
+    check_colliding_cat(cat) {
+        const T = this.inverse.times(cat.getLocation());
 
         let points = Vector3.cast(
-            [-4, 0, -4], [-4, 0, 4], [-4, 16, -4], [-4, 16, 4], [4, 0, -4], [4, 0, 4], [4, 16, -4], [4, 16, 4],);
+            [-4, 0, -4], [-4, 0, 4], [-4, 16, -4], [-4, 16, 4], [4, 0, -4], [4, 0, 4], [4, 16, -4], [4, 16, 4]);
         let intersect_test = Watermelon.intersect_cube;
         return points.some(p =>
             intersect_test(T.times(p.to4(1)).to3(), this.width));
+    }
+
+    check_colliding_target(target, tol) {
+        return this.center[1] > -5 && this.center[1] < 1 && Math.sqrt((this.center[0] - target.center[0])**2 + (this.center[2] - target.center[2])**2) < target.radius * tol && !target.collided;
     }
 }

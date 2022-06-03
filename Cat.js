@@ -157,7 +157,7 @@ export class Cat extends PhysicsObject {
         this.shapes.cone.draw(context, program_state, model_transform_inner_ear, this.materials.plastic.override({color: tom_ear_color}));
     }
 
-    collide(context, program_state) {
+    collide(program_state) {
         this.hit = true;
         this.hit_time = program_state.animation_time;
     }
@@ -170,11 +170,8 @@ export class Cat extends PhysicsObject {
         if (this.hit) {
             let scaling_factor = Math.min((program_state.animation_time - this.hit_time) / 150, 3);
             this.draw_cat(context, program_state, Mat4.translation(...this.center.plus(vec3(0, 13, 0))).times(Mat4.scale(1.15, 1.15, 1.15)).times(Mat4.rotation(-Math.PI / 2, 0, 1, 0)), scaling_factor);
-
-            //this.shapes.cube.draw(context, program_state, Mat4.translation(...this.center).times(Mat4.scale(4, 8, 4 + scaling_factor)).times(Mat4.translation(0, 1, 0)), this.material);
         } else
             this.draw_cat(context, program_state, Mat4.translation(...this.center.plus(vec3(0, 13, 0))).times(Mat4.scale(1.15, 1.15, 1.15)).times(Mat4.rotation(-Math.PI / 2, 0, 1, 0)), 1);
 
-        //this.shapes.cube.draw(context, program_state, Mat4.translation(...this.center).times(Mat4.scale(4, 8, 4)).times(Mat4.translation(0, 1, 0)), this.material);
     }
 }

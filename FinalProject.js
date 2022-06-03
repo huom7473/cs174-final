@@ -4,6 +4,9 @@ import {Cloud, Ground} from "./models.js";
 import {Cat} from "./Cat.js";
 import {Watermelon} from "./Watermelon.js";
 import {Plane} from "./Plane.js";
+import {Target} from "./Target.js"
+import {Curve_Shape, Hermite_Spline} from "./spline.js";
+
 
 const {
     Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene, Texture
@@ -65,28 +68,25 @@ export class FinalProject extends Simulation {
 
         this.initial_camera_location = Mat4.look_at(vec3(20, 0, 0), vec3(0, 0, 0), vec3(0, 1, 0));
 
-        // this.ball = new PhysicsObject(this.shapes.cone, 50, this.materials.test);
-        // this.ball.forces.gravity = {
-        //     value: vec3(0, -1 * 0.1 * this.ball.mass, 0),
-        //     loc: vec3(0, 0, .2)
-        // };
-
+        this.mode = 1;
         this.reset_values();
         this.drop_watermelon = false;
         this.melons = [];
-        this.mode = 1;
 
         this.clouds = this.generate_clouds();
     }
 
-    reset_values () {
+    reset_values() {
         this.plane = new Plane();
-        this.bodies.pop();
+        this.bodies = [];
         this.bodies.push(this.plane);
         let cat_color = [hex_color("#000000"), hex_color("#e8e0b6"), hex_color("#ffa500")][Math.floor(Math.random() * 3)];
         this.cat = new Cat(this.shapes.cube, cat_color, this.materials.plastic.override({color: cat_color}), vec3(-5, 0, 100), this);
 
+        const {r, spline} = this.generate_target_trajectory(3);
+        this.target_trajectory = new Curve_Shape((t) => spline.get_position(t), 1000);
         this.plane.center = vec3(0, 80, 0);
+        this.target = new Target(r, spline, this);
         this.melon_flag = true;
         this.score = 0;
         this.melons = [];
@@ -352,7 +352,7 @@ export class FinalProject extends Simulation {
 
     update_state(dt) {
 
-        if (this.score >= 5) {
+        if (this.score >= 30) {
             Plane.THRUST = Plane.THRUST_FAST;
             Plane.LIFT_POWER = Plane.LIFT_POWER_FAST;
             Plane.DRAG_CONSTANT = Plane.DRAG_CONSTANT_FAST;
@@ -365,6 +365,56 @@ export class FinalProject extends Simulation {
         if (this.plane.center[1] < 7)
             this.reset_values();
 
+    }
+
+    generate_target_trajectory(num_pts) {
+        const MIN_DIST_Z = 150;
+        const MAX_DIST_Z = 300;
+        const MIN_DIST_X = [0, 15, 40, 100][this.mode];
+        const MAX_DIST_X = [15, 40, 100, 200][this.mode];
+        const MIN_RAD = 5;
+        const MAX_RAD = 15;
+
+        const starting_direction = Math.random() < 0.5 ? 1 : -1;
+        const X_offset = Math.random() * (MAX_DIST_X - MIN_DIST_X) + MIN_DIST_X;
+        const Z_offset = Math.random() * (MAX_DIST_Z - MIN_DIST_Z) + MIN_DIST_Z;
+        const r = Math.ceil(Math.random() * (MAX_RAD - MIN_RAD)) + MIN_RAD;
+
+        let initial_position = vec3(this.plane.center[0] + starting_direction * X_offset,
+            1,
+            this.plane.center[2] + Z_offset
+        )
+
+        let ending_position = vec3(this.plane.center[0] - starting_direction * X_offset,
+            1,
+            this.plane.center[2] + Z_offset
+        )
+
+        const spline = new Hermite_Spline();
+        const pts = [initial_position]
+        const tangents = []
+        //spline.add_point(...initial_position, 0, 0, 0);
+
+        const x_step = -starting_direction * 2 * X_offset / (num_pts + 1);
+        const MIN_Z_OFFSET = [0, 10, 20, 40][this.mode];
+        const MAX_Z_OFFSET = [10, 20, 40, 80][this.mode];
+        for (let i = 1; i <= num_pts; ++i) {
+            const dir = Math.random() < 0.5 ? 1 : -1;
+            const offset = Math.random() * (MAX_Z_OFFSET - MIN_Z_OFFSET) + MIN_Z_OFFSET;
+            pts.push(vec3(initial_position[0] + i * x_step, 1, initial_position[2] + dir * offset));
+            tangents.push(pts[pts.length - 1].minus(pts[pts.length - 2]))
+            //spline.add_point(initial_position[0] + i * x_step, 1, initial_position[2] + dir * offset, 0, 0, 0);
+        }
+        //spline.add_point(...ending_position, 0, 0, 0);
+        pts.push(ending_position)
+        tangents.push(pts[pts.length - 1].minus(pts[pts.length - 2]));
+        tangents.push(vec3(0, 0, 0));
+
+        for (let i = 0; i < pts.length; ++i) {
+            spline.add_point(...pts[i], ...tangents[i]);
+        }
+
+        return {r, spline};
     }
 
     display(context, program_state) {
@@ -405,7 +455,6 @@ export class FinalProject extends Simulation {
         if (program_state.animate)
             this.simulate(program_state.animation_delta_time);
 
-        //this.shapes.axes.draw(context, program_state, this.plane.drawn_location.times(Mat4.scale(6, 6, 6)), this.materials.test);
         let transform_plane = this.plane.drawn_location
             .times(Mat4.translation(5, -5, 5));
 
@@ -416,14 +465,19 @@ export class FinalProject extends Simulation {
         for (let melon of this.melons) {
             if (melon.drawn_location != null){
                 melon.inverse = Mat4.inverse(melon.drawn_location);
-                if (melon.check_colliding(this.cat)) {
-                    this.cat.collide(context, program_state);
+                if (melon.check_colliding_cat(this.cat)) {
+                    this.cat.collide(program_state);
                     melon.collide();
-                    this.score += 1;
+                    this.score += 5;
                     continue;
+                } else if (melon.check_colliding_target(this.target, 1.2)) {
+                    this.target.collide(program_state);
+                    melon.collide();
+                    this.score += 16 - this.target.radius;
                 }
             }
             let model_transform_melon = melon.drawn_location.times(Mat4.rotation(Math.PI / 2, 0,1,0)).times(Mat4.scale(6,3,3));
+            this.shapes.sphere.draw(context, program_state, Mat4.translation(...melon.center), this.materials.plastic)
             this.shapes.sphere.draw(context, program_state, model_transform_melon, this.materials.watermelon);
         }
 
@@ -441,6 +495,12 @@ export class FinalProject extends Simulation {
             this.cat = new Cat(this.shapes.cube, cat_color, this.materials.plastic.override({color: cat_color}), cat_position, this);
         }
 
+        if (this.target.center[2] < this.plane.center[2] - 80) {
+            const {r, spline} = this.generate_target_trajectory(3);
+            this.target_trajectory = new Curve_Shape((t) => spline.get_position(t), 1000);
+            this.target = new Target(r, spline, this);
+        }
+
         this.melons = this.melons.filter(melon => !melon.collided);
         this.bodies = this.bodies.filter(melon => !melon.collided);
 
@@ -448,6 +508,8 @@ export class FinalProject extends Simulation {
             this.shapes.cloud.draw(context, program_state, cloud_transform, this.materials.cloud);
         }
 
+        this.target.draw(context, program_state);
+        this.target_trajectory.draw(context, program_state);
     }
 }
 
