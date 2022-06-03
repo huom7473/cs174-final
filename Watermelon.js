@@ -32,6 +32,10 @@ export class Watermelon extends PhysicsObject {
         this.collided = true;
     }
 
+    check_ground_collision(){
+        return this.center[1] < 2;
+    }
+
     check_colliding(cat) {
         //console.log("checking");
 
