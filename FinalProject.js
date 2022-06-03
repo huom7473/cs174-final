@@ -7,6 +7,7 @@ import {Plane} from "./Plane.js";
 import {Target} from "./Target.js"
 import {Curve_Shape, Hermite_Spline} from "./spline.js";
 
+import {Sim} from "./Sim.js"
 
 const {
     Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene, Texture
@@ -31,7 +32,8 @@ export class FinalProject extends Simulation {
             square: new defs.Square(),
             cloud: new Cloud(),
             ground: new Ground(),
-            axes: new defs.Axis_Arrows()
+            axes: new defs.Axis_Arrows(),
+            ball: new Subdivision_Sphere(4)
         };
 
         // *** Materials
@@ -72,7 +74,7 @@ export class FinalProject extends Simulation {
         this.reset_values();
         this.drop_watermelon = false;
         this.melons = [];
-
+        this.simulation = new Sim();
         this.clouds = this.generate_clouds();
     }
 
@@ -85,11 +87,16 @@ export class FinalProject extends Simulation {
 
         const {r, spline} = this.generate_target_trajectory(3);
         this.target_trajectory = new Curve_Shape((t) => spline.get_position(t), 1000);
+        this.simulation = new Sim();
         this.plane.center = vec3(0, 80, 0);
         this.target = new Target(r, spline, this);
         this.melon_flag = true;
         this.score = 0;
         this.melons = [];
+        this.t_sim = 0;
+        this.time_step = .001;
+        this.death_timer = 0;
+        this.animate = true;
     }
 
     draw_tom(context, program_state, model_transform) {
@@ -362,8 +369,12 @@ export class FinalProject extends Simulation {
             Plane.LIFT_POWER = Plane.LIFT_POWER_SLOW;
             Plane.DRAG_CONSTANT = Plane.DRAG_CONSTANT_SLOW;
         }
-        if (this.plane.center[1] < 7)
-            this.reset_values();
+        if (this.plane.center[1] < 7){
+            this.animate = false;
+            this.simulation.plane_collision(this.plane.center);
+        }
+
+
 
     }
 
@@ -418,6 +429,16 @@ export class FinalProject extends Simulation {
     }
 
     display(context, program_state) {
+        if(!this.animate){
+            this.death_timer += 1;
+            if(this.death_timer > 100){
+                this.reset_values();
+                this.death_timer = 0;
+            }
+        }
+
+        program_state.animate = this.animate;
+
         if (this.drop_watermelon){
             this.drop_watermelon = false;
             let melon = new Watermelon(this.shapes.sphere, this.materials.watermelon, this.plane.center, this.plane.rotation, this.plane.velocity);
@@ -458,8 +479,9 @@ export class FinalProject extends Simulation {
         let transform_plane = this.plane.drawn_location
             .times(Mat4.translation(5, -5, 5));
 
-        this.draw_plane(context, program_state, transform_plane, this.melon_flag, this.hide_plane);
-
+        if(this.animate){
+            this.draw_plane(context, program_state, transform_plane, this.melon_flag, this.hide_plane);
+        }
         this.cat.display(context, program_state);
 
         for (let melon of this.melons) {
@@ -472,12 +494,15 @@ export class FinalProject extends Simulation {
                     continue;
                 } else if (melon.check_colliding_target(this.target, 1.2)) {
                     this.target.collide(program_state);
+                    this.simulation.watermelon_collision(melon.center)
                     melon.collide();
                     this.score += 16 - this.target.radius;
+                } else if (melon.check_ground_collision()) {
+                    this.simulation.watermelon_collision(melon.center)
+                    melon.collide();
                 }
             }
             let model_transform_melon = melon.drawn_location.times(Mat4.rotation(Math.PI / 2, 0,1,0)).times(Mat4.scale(6,3,3));
-            this.shapes.sphere.draw(context, program_state, Mat4.translation(...melon.center), this.materials.plastic)
             this.shapes.sphere.draw(context, program_state, model_transform_melon, this.materials.watermelon);
         }
 
@@ -510,6 +535,17 @@ export class FinalProject extends Simulation {
 
         this.target.draw(context, program_state);
         this.target_trajectory.draw(context, program_state);
+
+        this.simulation.draw ( context, program_state, this.shapes, this.materials);
+        let dt = 1/30;
+
+        const t_next = this.t_sim + dt;
+        while(this.t_sim < t_next) {
+            this.simulation.update(this.time_step, "symplectic");
+            this.t_sim += this.time_step;
+        }
+
+
     }
 }
 
