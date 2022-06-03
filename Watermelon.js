@@ -46,6 +46,6 @@ export class Watermelon extends PhysicsObject {
     }
 
     check_colliding_target(target, tol) {
-        return this.center[1] > -5 && this.center[1] < 1 && Math.sqrt((this.center[0] - target.center[0])**2 + (this.center[2] - target.center[2])**2) < target.radius * tol && !target.collided;
+        return this.center[1] < 2 && Math.sqrt((this.center[0] - target.center[0])**2 + (this.center[2] - target.center[2])**2) < target.radius * tol && !target.collided;
     }
 }

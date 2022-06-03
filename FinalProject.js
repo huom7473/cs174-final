@@ -205,7 +205,7 @@ export class FinalProject extends Simulation {
 
 
     generate_clouds() {
-        const MIN_HEIGHT = 20;
+        const MIN_HEIGHT = 80;
         const MAX_HEIGHT = 180;
         const MIN_POS = -5000;
         const MAX_POS = 5000;
@@ -373,8 +373,6 @@ export class FinalProject extends Simulation {
             this.animate = false;
             this.simulation.plane_collision(this.plane.center);
         }
-
-
 
     }
 
