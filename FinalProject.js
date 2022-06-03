@@ -488,7 +488,7 @@ export class FinalProject extends Simulation {
         for (let melon of this.melons) {
             if (melon.drawn_location != null){
                 melon.inverse = Mat4.inverse(melon.drawn_location);
-                if (melon.check_colliding_cat(this.cat)) {
+                if (melon.check_colliding_cat(this.cat) && this.cat.valid) {
                     this.cat.collide(program_state);
                     melon.collide();
                     this.score += 5;
@@ -508,7 +508,7 @@ export class FinalProject extends Simulation {
         }
 
         this.plane.inverse = Mat4.inverse(this.plane.drawn_location);
-        if (this.plane.check_colliding_cat(this.cat) && this.cat.valid) {
+        if (this.plane.check_colliding_cat(this.cat) && this.cat.valid && !this.cat.hit) {
             this.cat.valid = false;
             this.simulation.cat_collision(this.cat.center, this.cat.color);
             this.score += 1;
