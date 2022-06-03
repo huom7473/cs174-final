@@ -341,7 +341,7 @@ export class FinalProject extends Simulation {
                 if (!this.melon_flag) return;
                 this.drop_watermelon = true;
                 this.melon_flag = false;
-                setTimeout(() => this.melon_flag = true, 2000);
+                setTimeout(() => this.melon_flag = true, 1500);
             },
             undefined);
         this.new_line(); this.new_line();
@@ -480,7 +480,10 @@ export class FinalProject extends Simulation {
         if(this.animate){
             this.draw_plane(context, program_state, transform_plane, this.melon_flag, this.hide_plane);
         }
-        this.cat.display(context, program_state);
+        if(this.cat.valid){
+            this.cat.display(context, program_state);
+        }
+
 
         for (let melon of this.melons) {
             if (melon.drawn_location != null){
@@ -504,6 +507,12 @@ export class FinalProject extends Simulation {
             this.shapes.sphere.draw(context, program_state, model_transform_melon, this.materials.watermelon);
         }
 
+        this.plane.inverse = Mat4.inverse(this.plane.drawn_location);
+        if (this.plane.check_colliding_cat(this.cat) && this.cat.valid) {
+            this.cat.valid = false;
+            this.simulation.cat_collision(this.cat.center, this.cat.color);
+            this.score += 1;
+        }
         const MIN_CAT_DIST_Z = 120;
         const MAX_CAT_DIST_Z = 300;
         let MIN_CAT_DIST_X = [0, 15, 40, 100][this.mode];

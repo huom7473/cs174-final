@@ -45,6 +45,8 @@ export class Plane extends PhysicsObject {
             value: vec3(0, -PhysicsObject.ACC_GRAVITY * this.mass, 0)
         };
 
+        this.width = 5;
+
     }
 
     update_thrust() {
@@ -159,6 +161,19 @@ export class Plane extends PhysicsObject {
         this.update_steering();
 
         super.advance(time_amount);
+    }
+
+    static intersect_cube(p, margin = 0) {
+        return p.every(value => value >= -1 - margin && value <= 1 + margin)
+    }
+    check_colliding_cat(cat) {
+        const T = this.inverse.times(cat.getLocation());
+
+        let points = Vector3.cast(
+            [-4, 0, -4], [-4, 0, 4], [-4, 16, -4], [-4, 16, 4], [4, 0, -4], [4, 0, 4], [4, 16, -4], [4, 16, 4]);
+        let intersect_test = Plane.intersect_cube;
+        return points.some(p =>
+            intersect_test(T.times(p.to4(1)).to3(), this.width));
     }
 
 }

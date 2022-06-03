@@ -19,6 +19,7 @@ class Particle {
         this.acc = vec3(0,0,0);
         this.ext_force = vec3(0,0,0);
         this.valid = false
+        this.counter = 0;
         this.color = hex_color("#000000");
     }
 
@@ -87,6 +88,7 @@ export class Sim {
         p.pos = vec3(x,y,z);
         p.vel = vec3(vx,vy,vz);
         p.color = color;
+
         this.particles.push(p)
     }
     update(dt, method) {
@@ -147,37 +149,31 @@ export class Sim {
 
     }
 
+    cat_collision(center, cat_color){
+        for (let i = 0; i < 3; i++){
+            for (let j = 0; j < 6; j++){
+                for (let k = 0; k < 3; k++) {
+                    this.addParticle(1.0, center[0] + (i*2) - 2.5, center[1] + 10 + j - 3, center[2] + (k*2) - 2.5, (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 15, (Math.random() - 0.5) * 30, cat_color);
+                }
+            }
+        }
+        if(this.particles.length > 150){
+            this.particles = this.particles.slice(50, 200);
+        }
+
+    }
+
     draw(webgl_manager, uniforms, shapes, materials){
         const blue = color(0,0,1,1), red = color(1,0,0,1);
 
         for (const p of this.particles) {
-
+            p.counter += 1;
+            this.particles = this.particles.filter(p => p.counter < 250);
             const pos = p.pos;
             let model_transform = Mat4.scale(0.4,0.4,0.4);
             model_transform.pre_multiply(Mat4.translation(pos[0], pos[1], pos[2]));
             shapes.ball.draw(webgl_manager, uniforms, model_transform, { ...materials.plastic, color:p.color});
         }
-        /*
-        for (const s of this.springs) {
-            const p1 = s.p_1.pos;
-            const p2 = s.p_2.pos;
-            const len = (p2.minus(p1)).norm();
-            const center = (p1.plus(p2)).times(0.5);
 
-            let model_transform = Mat4.scale(0.05, len / 2, 0.05);
-            const p = p1.minus(p2).normalized();
-            let v = vec3(0,1,0);
-            if (Math.abs(v.cross(p).norm()) < .1){
-                v = vec3(0,0,1);
-                model_transform = Mat4.scale(0.05, 0.05, len/2);
-            }
-            const w = v.cross(p).normalized();
-
-            const theta = Math.acos(v.dot(p));
-            model_transform.pre_multiply(Mat4.rotation(theta, w[0], w[1], w[2]));
-            model_transform.pre_multiply(Mat4.translation(center[0], center[1], center[2]));
-            shapes.box.draw(webgl_manager, uniforms, model_transform, { ...materials.plastic, color:red});
-
-        }*/
     }
 }

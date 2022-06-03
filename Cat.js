@@ -19,6 +19,7 @@ export class Cat extends PhysicsObject {
         this.center[1] = 0;
         this.hit = false;
         this.materials = project.materials;
+        this.valid = true;
 
     }
 
