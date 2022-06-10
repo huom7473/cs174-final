@@ -46,7 +46,7 @@ export class Ground extends Shape {
         defs.Square.insert_transformed_copy_into(this, [],
             Mat4.rotation(Math.PI / 2, 1, 0, 0)
                 .times(Mat4.translation(0, 0, 0))
-                .times(Mat4.scale(5000, 5000, 0))
+                .times(Mat4.scale(10000, 5000, 0))
         );
         this.arrays.texture_coord = [vec(0, 0), vec(500, 0), vec(0, 500), vec(500, 500)];
     }

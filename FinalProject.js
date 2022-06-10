@@ -8,6 +8,7 @@ import {Target} from "./Target.js"
 import {Curve_Shape, Hermite_Spline} from "./spline.js";
 
 import {Sim} from "./Sim.js"
+import {PowerUp} from "./powerup.js";
 
 const {
     Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene, Texture
@@ -74,8 +75,12 @@ export class FinalProject extends Simulation {
         this.reset_values();
         this.drop_watermelon = false;
         this.melons = [];
+        this.reload_time = 1500;
         this.simulation = new Sim();
         this.clouds = this.generate_clouds();
+        this.tom_color = hex_color("#4a5282");
+        this.powerup_timer = 0;
+
     }
 
     reset_values() {
@@ -84,7 +89,9 @@ export class FinalProject extends Simulation {
         this.bodies.push(this.plane);
         let cat_color = [hex_color("#000000"), hex_color("#e8e0b6"), hex_color("#ffa500")][Math.floor(Math.random() * 3)];
         this.cat = new Cat(this.shapes.cube, cat_color, this.materials.plastic.override({color: cat_color}), vec3(-5, 0, 100), this);
-
+        this.powerup_function = () => {this.reload_time = 150; this.tom_color = hex_color("#FF0000"); setTimeout(() => {this.reload_time = 1500; this.tom_color = hex_color("#4a5282");}, 5000)}
+        this.powerup = new PowerUp(5, vec3(15, 20, 100), this.powerup_function, this);
+        this.powerup.valid = false;
         const {r, spline} = this.generate_target_trajectory(3);
         this.target_trajectory = new Curve_Shape((t) => spline.get_position(t), 1000);
         this.simulation = new Sim();
@@ -100,14 +107,13 @@ export class FinalProject extends Simulation {
     }
 
     draw_tom(context, program_state, model_transform) {
-        let tom_color = hex_color("#4a5282");
         let tom_ear_color = hex_color("#763956");
 
         let model_transform_original = model_transform;
         model_transform = model_transform.times(Mat4.scale(3, 3, 3));
-        this.shapes.sphere.draw(context, program_state, model_transform, this.materials.plastic.override({color: tom_color}));
+        this.shapes.sphere.draw(context, program_state, model_transform, this.materials.plastic.override({color: this.tom_color}));
         model_transform = model_transform.times(Mat4.translation(2, -1, 0)).times(Mat4.scale(2, 1.5, 1));
-        this.shapes.sphere.draw(context, program_state, model_transform, this.materials.plastic.override({color: tom_color}));
+        this.shapes.sphere.draw(context, program_state, model_transform, this.materials.plastic.override({color: this.tom_color}));
 
         //outer ear
         let model_transform_ear = model_transform_original
@@ -116,14 +122,14 @@ export class FinalProject extends Simulation {
             .times(Mat4.translation(0, 3.5, 0))
             .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
             .times(Mat4.scale(2, 0.1, 2));
-        this.shapes.cone.draw(context, program_state, model_transform_ear, this.materials.plastic.override({color:tom_color}));
+        this.shapes.cone.draw(context, program_state, model_transform_ear, this.materials.plastic.override({color:this.tom_color}));
         model_transform_ear = model_transform_original
             .times(Mat4.rotation(Math.PI / 2, 0, 1, 0))
             .times(Mat4.rotation(-Math.PI / 6, 0, 0, 1))
             .times(Mat4.translation(0, 3.5, 0))
             .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
             .times(Mat4.scale(2  , 0.1, 2));
-        this.shapes.cone.draw(context, program_state, model_transform_ear, this.materials.plastic.override({color:tom_color}));
+        this.shapes.cone.draw(context, program_state, model_transform_ear, this.materials.plastic.override({color:this.tom_color}));
 
         //inner ear
         let model_transform_inner_ear = model_transform_original
@@ -341,7 +347,7 @@ export class FinalProject extends Simulation {
                 if (!this.melon_flag) return;
                 this.drop_watermelon = true;
                 this.melon_flag = false;
-                setTimeout(() => this.melon_flag = true, 1500);
+                setTimeout(() => this.melon_flag = true, this.reload_time);
             },
             undefined);
         this.new_line(); this.new_line();
@@ -457,14 +463,14 @@ export class FinalProject extends Simulation {
             .times(Mat4.translation(0, 0, -60))
             //.times(Mat4.translation(60, 10, -15))
             .times(Mat4.rotation(Math.PI, 0, 1, 0))
-            );
+        );
         desired = desired.map((x,i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.1));
         program_state.set_camera(desired);
 
 
         program_state.projection_transform = Mat4.perspective(
             Math.PI / 4, context.width / context.height, 1, 1000);
-            // *** Lights: *** Values of vector or point lights.
+        // *** Lights: *** Values of vector or point lights.
         const light_position = vec4(0.5, 1, 0, 0).normalized();
         program_state.lights = [new Light(light_position, hex_color("ffe499"), 10000)];
 
@@ -483,12 +489,14 @@ export class FinalProject extends Simulation {
         if(this.cat.valid){
             this.cat.display(context, program_state);
         }
-
+        if(this.powerup.valid){
+            this.powerup.draw(context, program_state);
+        }
 
         for (let melon of this.melons) {
             if (melon.drawn_location != null){
                 melon.inverse = Mat4.inverse(melon.drawn_location);
-                if (melon.check_colliding_cat(this.cat) && this.cat.valid) {
+                if (melon.check_colliding_cat(this.cat)) {
                     this.cat.collide(program_state);
                     melon.collide();
                     this.score += 5;
@@ -503,8 +511,10 @@ export class FinalProject extends Simulation {
                     melon.collide();
                 }
             }
-            let model_transform_melon = melon.drawn_location.times(Mat4.rotation(Math.PI / 2, 0,1,0)).times(Mat4.scale(6,3,3));
-            this.shapes.sphere.draw(context, program_state, model_transform_melon, this.materials.watermelon);
+            if(this.animate){
+                let model_transform_melon = melon.drawn_location.times(Mat4.rotation(Math.PI / 2, 0,1,0)).times(Mat4.scale(6,3,3));
+                this.shapes.sphere.draw(context, program_state, model_transform_melon, this.materials.watermelon);
+            }
         }
 
         this.plane.inverse = Mat4.inverse(this.plane.drawn_location);
@@ -513,6 +523,10 @@ export class FinalProject extends Simulation {
             this.simulation.cat_collision(this.cat.center, this.cat.color);
             this.score += 1;
         }
+        this.powerup.try_colliding_with_plane(this.plane.center, this.plane.width)
+
+
+
         const MIN_CAT_DIST_Z = 120;
         const MAX_CAT_DIST_Z = 300;
         let MIN_CAT_DIST_X = [0, 15, 40, 100][this.mode];
@@ -525,6 +539,23 @@ export class FinalProject extends Simulation {
                 this.plane.center[2] + (Math.random() * (MAX_CAT_DIST_Z - MIN_CAT_DIST_Z) + MIN_CAT_DIST_Z)
             )
             this.cat = new Cat(this.shapes.cube, cat_color, this.materials.plastic.override({color: cat_color}), cat_position, this);
+        }
+
+        const MIN_POWERUP_DIST_Y = 20;
+        const MAX_POWERUP_DIST_Y = 50;
+        if (this.powerup.center[2] < this.plane.center[2] - 40) {
+
+            this.powerup_timer += 1
+            if(this.powerup_timer > 400){
+                let powerup_position = vec3(
+                    this.plane.center[0] + (Math.random() < 0.5 ? 1 : -1) * (Math.random() * (MAX_CAT_DIST_X - MIN_CAT_DIST_X) + MIN_CAT_DIST_X),
+                    (Math.random() * (MAX_POWERUP_DIST_Y - MIN_POWERUP_DIST_Y) + MIN_POWERUP_DIST_Y),
+                    this.plane.center[2] + (Math.random() * (MAX_CAT_DIST_Z - MIN_CAT_DIST_Z) + MIN_CAT_DIST_Z)
+                )
+                this.powerup = new PowerUp(5, powerup_position, this.powerup_function, this);
+                this.powerup_timer = 0;
+            }
+
         }
 
         if (this.target.center[2] < this.plane.center[2] - 80) {

@@ -47,7 +47,6 @@ export class Target {
     }
 
     collide(program_state) {
-        console.log('hi')
         this.ct0 = program_state.animation_time;
     }
 }

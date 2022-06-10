@@ -17,7 +17,7 @@ export class Plane extends PhysicsObject {
     static THRUST = Plane.THRUST_SLOW;
 
     static DRAG_CONSTANT_FAST = 1.2;
-    static DRAG_CONSTANT_SLOW = 4;
+    static DRAG_CONSTANT_SLOW = 3.5;
     static DRAG_CONSTANT = Plane.DRAG_CONSTANT_SLOW;
     static DRAG_CONSTANT_VER = 8;
 
